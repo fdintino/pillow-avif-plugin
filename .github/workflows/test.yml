@@ -1,0 +1,89 @@
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [
+          "ubuntu-latest",
+          "macOS-latest",
+        ]
+        python-version: [
+          "pypy-3.7",
+          "3.9",
+          "3.8",
+          "3.7",
+          "3.6",
+          "2.7",
+        ]
+        include:
+        - python-version: "3.6"
+          PYTHONOPTIMIZE: 1
+        - python-version: "3.7"
+          PYTHONOPTIMIZE: 2
+        # Include new variables for Codecov
+        - os: ubuntu-latest
+          codecov-flag: GHA_Ubuntu
+        - os: macOS-latest
+          codecov-flag: GHA_macOS
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} Python ${{ matrix.python-version }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Linux dependencies
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        .github/workflows/linux-install.sh
+      env:
+        GHA_PYTHON_VERSION: ${{ matrix.python-version }}
+
+    - name: Install macOS dependencies
+      if: startsWith(matrix.os, 'macOS')
+      run: |
+        .github/workflows/macos-install.sh
+      env:
+        GHA_PYTHON_VERSION: ${{ matrix.python-version }}
+
+    - name: Test
+      run: |
+        tox
+      env:
+        PYTHONOPTIMIZE: ${{ matrix.PYTHONOPTIMIZE }}
+
+    - name: Prepare to upload errors
+      if: failure()
+      run: |
+        mkdir -p tests/errors
+      shell: pwsh
+
+    - name: Upload errors
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: errors
+        path: tests/errors
+
+    - name: Upload coverage
+      run: tox -e codecov -- -F ${{ matrix.codecov-flag }}
+      env:
+        CODECOV_NAME: ${{ matrix.os }} Python ${{ matrix.python-version }}
+
+  success:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Test Successful
+    steps:
+      - name: Success
+        run: echo Test Successful

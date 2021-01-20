@@ -1,0 +1,6 @@
+include *.md
+include tox.ini
+graft src
+
+global-exclude *.pyc
+global-exclude *.so
