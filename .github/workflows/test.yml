@@ -34,6 +34,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} Python ${{ matrix.python-version }}
 
+    env:
+      LIBAVIF_SHA: 82d720e
+
     steps:
     - uses: actions/checkout@v2
 
@@ -42,17 +45,23 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install Linux dependencies
-      if: startsWith(matrix.os, 'ubuntu')
-      run: |
-        .github/workflows/linux-install.sh
-      env:
-        GHA_PYTHON_VERSION: ${{ matrix.python-version }}
+    - name: Cache build
+      id: build-cache
+      uses: actions/cache@v2
+      with:
+        path: depends/libavif-${{ env.LIBAVIF_SHA }}
+        key:
+          ${{ hashFiles('.github/workflows/*.sh') }}-${{ hashFiles('.github/workflows/test.yml') }}-${{ hashFiles('depends/install_libavif.sh') }}-${{ matrix.os }}
 
-    - name: Install macOS dependencies
-      if: startsWith(matrix.os, 'macOS')
+    - name: Install nasm
+      if: steps.build-cache.outputs.cache-hit != 'true'
+      uses: ilammy/setup-nasm@v1
+      with:
+        version: 2.15.05
+
+    - name: Install dependencies
       run: |
-        .github/workflows/macos-install.sh
+        .github/workflows/install.sh
       env:
         GHA_PYTHON_VERSION: ${{ matrix.python-version }}
 

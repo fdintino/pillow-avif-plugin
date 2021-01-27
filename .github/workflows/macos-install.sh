@@ -2,7 +2,7 @@
 
 set -e
 
-brew install libjpeg libpng cmake nasm ninja meson
+brew install ninja meson
 
 if [ "$GHA_PYTHON_VERSION" == "2.7" ]; then
     python2 -m pip install -U tox tox-gh-actions
@@ -15,4 +15,9 @@ if [ "$GHA_PYTHON_VERSION" == "3.8" ]; then python3 -m pip install -U "setuptool
 if [ "$GHA_PYTHON_VERSION" == "3.9" ]; then python3 -m pip install -U "setuptools>=49.3.2" ; fi
 
 # libavif
-pushd depends && ./install_libavif.sh && popd
+if [ ! -d depends/libavif-$LIBAVIF_SHA ]; then
+    pushd depends && ./install_libavif.sh && popd
+fi
+pushd depends/libavif-$LIBAVIF_SHA/build
+make install
+popd
