@@ -733,17 +733,6 @@ _decoder_get_frame(AvifDecoderObject *self, PyObject *args) {
 /* Type Definitions                                                     */
 /* -------------------------------------------------------------------- */
 
-#define TPFLAGS_COMMON \
-    Py_TPFLAGS_DEFAULT | \
-    Py_TPFLAGS_HAVE_GC | \
-    Py_TPFLAGS_BASETYPE
-
-#if PY_VERSION_HEX < 0x03000000
-#define TPFLAGS TPFLAGS_COMMON | Py_TPFLAGS_CHECKTYPES
-#else
-#define TPFLAGS TPFLAGS_COMMON
-#endif
-
 // AvifEncoder methods
 static struct PyMethodDef _encoder_methods[] = {
     {"add", (PyCFunction)_encoder_add, METH_VARARGS},
@@ -759,7 +748,7 @@ static PyTypeObject AvifEncoder_Type = {
     // clang-format on
     .tp_basicsize = sizeof(AvifEncoderObject),
     .tp_dealloc = (destructor)_encoder_dealloc,
-    .tp_flags = TPFLAGS,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_methods = _encoder_methods,
 };
 
@@ -779,7 +768,7 @@ static PyTypeObject AvifDecoder_Type = {
     .tp_basicsize = sizeof(AvifDecoderObject),
     .tp_itemsize = 0,
     .tp_dealloc = (destructor)_decoder_dealloc,
-    .tp_flags = TPFLAGS,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_methods = _decoder_methods,
 };
 
