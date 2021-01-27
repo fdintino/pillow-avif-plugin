@@ -75,6 +75,11 @@ jobs:
         name: errors
         path: tests/errors
 
+    - name: Combine coverage
+      run: tox -e coverage-report
+      env:
+        CODECOV_NAME: ${{ matrix.os }} Python ${{ matrix.python-version }}
+
     - name: Upload coverage
       run: tox -e codecov -- -F ${{ matrix.codecov-flag }}
       env:
