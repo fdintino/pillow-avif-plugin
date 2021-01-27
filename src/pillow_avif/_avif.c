@@ -811,7 +811,12 @@ static int
 setup_module(PyObject *m) {
     PyObject *d = PyModule_GetDict(m);
 
-    PyDict_SetItemString(d, "libavif_version", PyUnicode_FromString(avifVersion()));
+    PyObject *v = PyUnicode_FromString(avifVersion());
+    if (PyDict_SetItemString(d, "libavif_version", v) < 0) {
+        Py_DECREF(v);
+        return -1;
+    }
+    Py_DECREF(v);
 
     if (PyType_Ready(&AvifDecoder_Type) < 0 || PyType_Ready(&AvifEncoder_Type) < 0) {
         return -1;
