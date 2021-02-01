@@ -35,7 +35,7 @@ jobs:
     name: ${{ matrix.os }} Python ${{ matrix.python-version }}
 
     env:
-      LIBAVIF_SHA: 82d720e
+      LIBAVIF_SHA: e86e59f
 
     steps:
     - uses: actions/checkout@v2
@@ -51,7 +51,7 @@ jobs:
       with:
         path: depends/libavif-${{ env.LIBAVIF_SHA }}
         key:
-          ${{ hashFiles('.github/workflows/*.sh') }}-${{ hashFiles('.github/workflows/test.yml') }}-${{ hashFiles('depends/install_libavif.sh') }}-${{ matrix.os }}
+          ${{ env.LIBAVIF_SHA }}-${{ hashFiles('.github/workflows/*.sh', '.github/workflows/test.yml', 'depends/*') }}-${{ matrix.os }}
 
     - name: Install nasm
       if: steps.build-cache.outputs.cache-hit != 'true'
