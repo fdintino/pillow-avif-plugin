@@ -1,0 +1,108 @@
+name: Wheels
+
+on: [push, pull_request]
+
+env:
+  REPO_DIR: pillow-avif-plugin
+  BUILD_DEPENDS: ""
+  TEST_DEPENDS: "pytest pillow"
+  MACOSX_DEPLOYMENT_TARGET: "10.10"
+  WHEEL_SDIR: wheelhouse
+  CONFIG_PATH: pillow-avif-plugin/wheelbuild/config.sh
+  LIBAVIF_SHA: e86e59f
+
+jobs:
+  build:
+    name: ${{ matrix.python }} ${{ matrix.os-name }} ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ "ubuntu-16.04", "macos-latest" ]
+        python: [ "pypy3.7-7.3.3", "pypy3.6-7.3", "2.7", "3.6", "3.7", "3.8", "3.9" ]
+        platform: [ "x86_64", "i686" ]
+        manylinux-version: [ "1", "2010" ]
+        exclude:
+          - os: "macos-latest"
+            platform: "i686"
+          - os: "macos-latest"
+            manylinux-version: "1"
+          - python: "pypy3.7-7.3.3"
+            manylinux-version: "1"
+          - python: "pypy3.6-7.3"
+            manylinux-version: "1"
+          - python: "pypy3.7-7.3.3"
+            manylinux-version: "2010"
+          - python: "pypy3.6-7.3"
+            manylinux-version: "2010"
+        include:
+          - os: "macos-latest"
+            os-name: "osx"
+          - os: "ubuntu-16.04"
+            manylinux-version: "1"
+            os-name: "manylinux1"
+          - os: "ubuntu-16.04"
+            manylinux-version: "2010"
+            os-name: "manylinux2010"
+    env:
+      BUILD_COMMIT: HEAD
+      PLAT: ${{ matrix.platform }}
+      MB_PYTHON_VERSION: ${{ matrix.python }}
+      TRAVIS_OS_NAME: ${{ matrix.os-name }}
+      MB_ML_VER: ${{ matrix.manylinux-version }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: pillow-avif-plugin
+
+      - name: Checkout dependencies
+        uses: actions/checkout@v2
+        with:
+          repository: fdintino/pillow-avif-plugin-depends
+          path: pillow-avif-plugin-depends
+
+      - name: Checkout multibuild
+        uses: actions/checkout@v2
+        with:
+          repository: matthew-brett/multibuild
+          path: multibuild
+          ref: 0d93db5422d6677aac5cf0ff4ecb731e5e629aa0
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Setup env_vars
+        run: echo "export LIBAVIF_SHA=${{ env.LIBAVIF_SHA }}" > env_vars.sh
+
+      - name: Cache build
+        id: build-cache
+        uses: actions/cache@v2
+        with:
+          path: pillow-avif-plugin/depends/libavif-${{ env.LIBAVIF_SHA }}
+          key:
+            ${{ env.LIBAVIF_SHA }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*') }}-${{ matrix.os }}-${{ matrix.platform }}
+
+      - name: Build Wheel
+        run: pillow-avif-plugin/wheelbuild/build.sh
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: wheelhouse/*.whl
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: "startsWith(github.ref, 'refs/tags/')"
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels
+
+      - name: Upload Release
+        uses: fnkr/github-action-ghr@v1.3
+        env:
+          GHR_PATH: .
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
