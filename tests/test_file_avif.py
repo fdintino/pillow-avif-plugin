@@ -21,13 +21,7 @@ from .helper import (
     hopper,
 )
 
-try:
-    from pillow_avif import _avif
-
-    HAVE_AVIF = True
-except ImportError:
-    _avif = None
-    HAVE_AVIF = False
+from pillow_avif import _avif
 
 try:
     from PIL import UnidentifiedImageError
@@ -75,8 +69,7 @@ def skip_unless_avif_encoder(codec_name):
 
 class TestUnsupportedAvif:
     def test_unsupported(self):
-        if HAVE_AVIF:
-            AvifImagePlugin.SUPPORTED = False
+        AvifImagePlugin.SUPPORTED = False
 
         try:
             file_path = "%s/tests/images/hopper.avif" % CURR_DIR
@@ -89,8 +82,7 @@ class TestUnsupportedAvif:
                 with pytest.raises(IOError):
                     Image.open(file_path)
         finally:
-            if HAVE_AVIF:
-                AvifImagePlugin.SUPPORTED = True
+            AvifImagePlugin.SUPPORTED = True
 
 
 class TestFileAvif:
