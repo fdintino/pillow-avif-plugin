@@ -49,7 +49,7 @@ setup(
     author_email='fdintino@theatlantic.com',
     url='https://github.com/fdintino/pillow-avif-plugin/',
     download_url='https://github.com/fdintino/pillow-avif-plugin/releases',
-    install_requires=['six'],
+    install_requires=[],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
