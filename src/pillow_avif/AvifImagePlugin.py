@@ -94,8 +94,15 @@ class AvifImageFile(ImageFile.ImageFile):
 
 
 def _save_all(im, fp, filename):
+    _save(im, fp, filename, save_all=True)
+
+
+def _save(im, fp, filename, save_all=False):
     info = im.encoderinfo.copy()
-    append_images = list(info.get("append_images", []))
+    if save_all:
+        append_images = list(info.get("append_images", []))
+    else:
+        append_images = []
 
     total = 0
     for ims in [im] + append_images:
@@ -183,6 +190,9 @@ def _save_all(im, fp, filename):
                 # Update frame index
                 frame_idx += 1
 
+                if not save_all:
+                    break
+
     finally:
         im.seek(cur_idx)
 
@@ -196,7 +206,7 @@ def _save_all(im, fp, filename):
 
 Image.register_open(AvifImageFile.format, AvifImageFile, _accept)
 if SUPPORTED:
-    Image.register_save(AvifImageFile.format, _save_all)
+    Image.register_save(AvifImageFile.format, _save)
     Image.register_save_all(AvifImageFile.format, _save_all)
     Image.register_extensions(AvifImageFile.format, [".avif", ".avifs"])
     Image.register_mime(AvifImageFile.format, "image/avif")
