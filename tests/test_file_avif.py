@@ -8,6 +8,11 @@ try:
 except ImportError:
     from multiprocessing import cpu_count
 
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
 import pytest
 
 from PIL import Image
@@ -349,17 +354,17 @@ class TestFileAvif:
             with pytest.raises(EOFError):
                 im.seek(1)
 
-    @pytest.mark.parametrize("yuv_format", ["4:4:4", "4:2:2", "4:0:0"])
-    def test_encoder_yuv_format(self, tmp_path, yuv_format):
+    @pytest.mark.parametrize("subsampling", ["4:4:4", "4:2:2", "4:0:0"])
+    def test_encoder_subsampling(self, tmp_path, subsampling):
         with Image.open(TEST_AVIF_FILE) as im:
             test_file = str(tmp_path / "temp.avif")
-            im.save(test_file, yuv_format=yuv_format)
+            im.save(test_file, subsampling=subsampling)
 
-    def test_encoder_yuv_format_invalid(self, tmp_path):
+    def test_encoder_subsampling_invalid(self, tmp_path):
         with Image.open(TEST_AVIF_FILE) as im:
             test_file = str(tmp_path / "temp.avif")
             with pytest.raises(ValueError):
-                im.save(test_file, yuv_format="foo")
+                im.save(test_file, subsampling="foo")
 
     def test_encoder_range(self, tmp_path):
         with Image.open(TEST_AVIF_FILE) as im:
@@ -433,6 +438,33 @@ class TestFileAvif:
 
     def test_encoder_codec_available_invalid(self):
         assert _avif.encoder_codec_available("foo") is False
+
+    @pytest.mark.parametrize(
+        "quality,expected_qminmax",
+        [
+            [0, (63, 63)],
+            [100, (0, 0)],
+            [90, (0, 10)],
+            [None, (0, 10)],  # default
+            [50, (14, 50)],
+        ],
+    )
+    def test_encoder_quality_qmin_qmax_map(self, tmp_path, quality, expected_qminmax):
+        MockEncoder = mock.Mock(wraps=_avif.AvifEncoder)
+        with mock.patch.object(_avif, "AvifEncoder", new=MockEncoder) as mock_encoder:
+            with Image.open("tests/images/hopper.avif") as im:
+                test_file = str(tmp_path / "temp.avif")
+                if quality is None:
+                    im.save(test_file)
+                else:
+                    im.save(test_file, quality=quality)
+            assert mock_encoder.call_args[0][3:5] == expected_qminmax
+
+    def test_encoder_quality_valueerror(self, tmp_path):
+        with Image.open("tests/images/hopper.avif") as im:
+            test_file = str(tmp_path / "temp.avif")
+            with pytest.raises(ValueError):
+                im.save(test_file, quality="invalid")
 
     @skip_unless_avif_decoder("aom")
     def test_decoder_codec_available(self):

@@ -110,12 +110,26 @@ def _save(im, fp, filename, save_all=False):
 
     is_single_frame = total == 1
 
+    qmin = info.get("qmin")
+    qmax = info.get("qmax")
+
+    if qmin is None and qmax is None:
+        # The min and max quantizer settings in libavif range from 0 (best quality)
+        # to 63 (worst quality). If neither are explicitly specified, we use a 0-100
+        # quality scale (default 90) and calculate the qmin and qmax from that.
+        #
+        # - qmin is 0 for quality >= 64. Below that, qmin has an inverse linear
+        #   relation to quality (i.e., quality 63 = qmin 1, quality 0 => qmin 63)
+        # - qmax is 0 for quality=100, then qmax increases linearly relative to
+        #   quality decreasing, until it flattens out at quality=37.
+        quality = info.get("quality", 90)
+        if not isinstance(quality, int):
+            raise ValueError("Invalid quality setting")
+        qmin = max(0, min(64 - quality, 63))
+        qmax = max(0, min(100 - quality, 63))
+
     duration = info.get("duration", 0)
-    yuv_format = info.get("yuv_format", "4:2:0")
-    qmin = info.get("qmin", 0)
-    qmax = info.get("qmax", 0)
-    qmin_alpha = info.get("qmin_alpha", 0)
-    qmax_alpha = info.get("qmax_alpha", 0)
+    subsampling = info.get("subsampling", "4:2:0")
     speed = info.get("speed", 8)
     codec = info.get("codec", "auto")
     range_ = info.get("range", "full")
@@ -133,17 +147,15 @@ def _save(im, fp, filename, save_all=False):
     enc = _avif.AvifEncoder(
         im.size[0],
         im.size[1],
-        yuv_format,
+        subsampling,
         qmin,
         qmax,
-        qmin_alpha,
-        qmax_alpha,
         speed,
         codec,
         range_,
-        icc_profile or b'',
-        exif or b'',
-        xmp or b'',
+        icc_profile or b"",
+        exif or b"",
+        xmp or b"",
     )
 
     # Add each frame
