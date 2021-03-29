@@ -2,7 +2,7 @@
 
 set -e
 
-brew install ninja meson
+brew install dav1d aom rav1e
 
 if [ "$GHA_PYTHON_VERSION" == "2.7" ]; then
     python2 -m pip install -U tox tox-gh-actions

@@ -1,0 +1,41 @@
+From f2b8e3c99adbecb8aa2fc49cf4d0973210bc05e5 Mon Sep 17 00:00:00 2001
+From: Frankie Dintino <fdintino@gmail.com>
+Date: Wed, 7 Apr 2021 17:12:57 -0400
+Subject: [PATCH] Define _mm256_bsrli_epi128 for old glibc; remove version.pl version constraint
+
+---
+ aom_dsp/x86/intrapred_x86.h | 4 ++++
+ build/cmake/version.pl       | 1 -
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/aom_dsp/x86/intrapred_x86.h b/aom_dsp/x86/intrapred_x86.h
+index b13f575..ddba5f0 100644
+--- a/aom_dsp/x86/intrapred_x86.h
++++ b/aom_dsp/x86/intrapred_x86.h
+@@ -35,4 +35,8 @@ static INLINE __m128i dc_sum_32_sse2(const uint8_t *ref) {
+   return _mm_add_epi16(x0, high);
+ }
+ 
++#if defined(__GNUC__) && __GNUC__ < 6
++  #define _mm256_bsrli_epi128(a, count) _mm256_srli_si256((a), (count))
++#endif
++
+ #endif  // AOM_AOM_DSP_X86_INTRAPRED_X86_H_
+-- 
+2.30.0
+
+diff --git a/build/cmake/version.pl b/build/cmake/version.pl
+index 7d23f2b..73c5f81 100755
+--- a/build/cmake/version.pl
++++ b/build/cmake/version.pl
+@@ -11,7 +11,6 @@
+ ##
+ use strict;
+ use warnings;
+-use 5.010;
+ use Getopt::Long;
+ 
+ my $git_desc = '';
+-- 
+2.30.0
+
