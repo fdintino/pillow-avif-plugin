@@ -208,7 +208,7 @@ jobs:
               ${{ matrix.package }}-python${{ matrix.python-version }}-setuptools \
               ${{ matrix.package }}-libavif
 
-          python${{ matrix.python-version }} -m pip install pytest pytest-cov pillow
+          python${{ matrix.python-version }} -m pip install pytest pytest-cov pillow mock
 
       - name: Build pillow-avif-plugin
         run: CFLAGS="-coverage" python${{ matrix.python-version }} setup.py build_ext install
