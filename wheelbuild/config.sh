@@ -155,6 +155,9 @@ function pre_build {
 }
 
 function run_tests {
+    if [ "$PYTHON_VERSION" == "2.7" ]; then
+        $PYTHON_EXE -m pip install mock
+    fi
     # Runs tests on installed distribution from an empty directory
     (cd ../pillow-avif-plugin && pytest)
 }
