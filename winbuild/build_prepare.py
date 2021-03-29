@@ -146,9 +146,9 @@ deps = {
         "libs": [r"libpng16.lib"],
     },
     "libavif": {
-        "url": "https://github.com/AOMediaCodec/libavif/archive/e86e59f.tar.gz",
-        "filename": "libavif-e86e59f.tar.gz",
-        "dir": "libavif-e86e59fc98cd67f262d34d2644aa66535af06712",
+        "url": "https://github.com/AOMediaCodec/libavif/archive/v0.9.0.tar.gz",
+        "filename": "libavif-0.9.0.tar.gz",
+        "dir": "libavif-0.9.0",
         "build": [
             cmd_append("PATH", r"{program_files}\Meson"),
             cmd_cd("ext"),

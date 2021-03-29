@@ -18,11 +18,11 @@ export CFLAGS="-fPIC -O3 $CFLAGS"
 export CXXFLAGS="-fPIC -O3 $CXXFLAGS"
 
 echo "::group::Fetching libavif"
-mkdir -p libavif-$LIBAVIF_SHA
+mkdir -p libavif-$LIBAVIF_VERSION
 curl -sLo - \
-    https://github.com/AOMediaCodec/libavif/archive/$LIBAVIF_SHA.tar.gz \
-    | tar --strip-components=1 -C libavif-$LIBAVIF_SHA -zxf -
-pushd libavif-$LIBAVIF_SHA
+    https://github.com/AOMediaCodec/libavif/archive/v$LIBAVIF_VERSION.tar.gz \
+    | tar --strip-components=1 -C libavif-$LIBAVIF_VERSION -zxf -
+pushd libavif-$LIBAVIF_VERSION
 echo "::endgroup::"
 
 pushd ext > /dev/null
@@ -31,7 +31,7 @@ echo "::group::Building aom"
 if [ "$TRAVIS_OS_NAME" == "manylinux1" ]; then
     # Patch for old perl and gcc on manylinux1
     if [ ! -e aom ]; then
-        git clone -b v2.0.1 --depth 1 https://aomedia.googlesource.com/aom
+        git clone -b v2.0.2 --depth 1 https://aomedia.googlesource.com/aom
     fi
     (cd aom && patch -p1 < ../../../aom-fixes-for-building-on-manylinux1.patch)
 fi

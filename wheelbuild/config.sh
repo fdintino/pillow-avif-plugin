@@ -2,7 +2,7 @@
 set -eo pipefail
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_SHA=e86e59f
+LIBAVIF_VERSION=0.9.0
 
 function install_meson {
     echo "::group::Install meson"
@@ -41,16 +41,16 @@ function install_rust {
 
 function build_libavif {
     local depends_dir="$REPO_DIR/depends"
-    local libavif_dir="$depends_dir/libavif-$LIBAVIF_SHA"
+    local libavif_dir="$depends_dir/libavif-$LIBAVIF_VERSION"
     local libavif_build_dir="$libavif_dir/build"
     if [ ! -d $libavif_build_dir ]; then
         echo "::group::Setup libavif build"
         set -x
-        if [ -e $ARCHIVE_SDIR/libavif-ext-$LIBAVIF_SHA.tar.gz ]; then
+        if [ -e $ARCHIVE_SDIR/libavif-ext-$LIBAVIF_VERSION.tar.gz ]; then
             mkdir -p $libavif_dir/ext
-            tar -C $libavif_dir/ext -zxf $ARCHIVE_SDIR/libavif-ext-$LIBAVIF_SHA.tar.gz
+            tar -C $libavif_dir/ext -zxf $ARCHIVE_SDIR/libavif-ext-$LIBAVIF_VERSION.tar.gz
         fi
-        LIBAVIF_CARGO_VENDOR_TGZ=$ARCHIVE_SDIR/libavif-rav1e-cargo-vendor-$LIBAVIF_SHA.tar.gz
+        LIBAVIF_CARGO_VENDOR_TGZ=$ARCHIVE_SDIR/libavif-rav1e-cargo-vendor-$LIBAVIF_VERSION.tar.gz
         if [ -e $LIBAVIF_CARGO_VENDOR_TGZ ] && [ -e "$HOME/.cargo" ]; then
             tar -C $ARCHIVE_SDIR -zxf $LIBAVIF_CARGO_VENDOR_TGZ
             VENDOR_DIR=$(pwd -P)/$ARCHIVE_SDIR/vendor
@@ -134,7 +134,7 @@ function pre_build {
     ensure_openssl
     install_zlib
 
-    local libavif_build_dir="$REPO_DIR/depends/libavif-$LIBAVIF_SHA/build"
+    local libavif_build_dir="$REPO_DIR/depends/libavif-$LIBAVIF_VERSION/build"
 
     if [ ! -e "$libavif_build_dir" ]; then
         build_nasm

@@ -9,7 +9,7 @@ env:
   MACOSX_DEPLOYMENT_TARGET: "10.10"
   WHEEL_SDIR: wheelhouse
   CONFIG_PATH: pillow-avif-plugin/wheelbuild/config.sh
-  LIBAVIF_SHA: e86e59f
+  LIBAVIF_VERSION: 0.9.0
 
 jobs:
   build:
@@ -75,15 +75,15 @@ jobs:
           python-version: 3.9
 
       - name: Setup env_vars
-        run: echo "export LIBAVIF_SHA=${{ env.LIBAVIF_SHA }}" > env_vars.sh
+        run: echo "export LIBAVIF_VERSION=${{ env.LIBAVIF_VERSION }}" > env_vars.sh
 
       - name: Cache build
         id: build-cache
         uses: actions/cache@v2
         with:
-          path: pillow-avif-plugin/depends/libavif-${{ env.LIBAVIF_SHA }}
+          path: pillow-avif-plugin/depends/libavif-${{ env.LIBAVIF_VERSION }}
           key:
-            ${{ env.LIBAVIF_SHA }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*') }}-${{ matrix.os }}-${{ matrix.platform }}
+            ${{ env.LIBAVIF_VERSION }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*') }}-${{ matrix.os }}-${{ matrix.platform }}
 
       - name: Build Wheel
         run: pillow-avif-plugin/wheelbuild/build.sh
