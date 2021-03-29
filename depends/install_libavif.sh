@@ -27,11 +27,6 @@ echo "::endgroup::"
 
 pushd ext > /dev/null
 
-echo "::group::Building libyuv"
-bash libyuv.cmd
-LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LOCAL_LIBYUV=ON)
-echo "::endgroup::"
-
 echo "::group::Building aom"
 if [ "$TRAVIS_OS_NAME" == "manylinux1" ]; then
     # Patch for old perl and gcc on manylinux1

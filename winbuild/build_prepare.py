@@ -152,10 +152,6 @@ deps = {
         "build": [
             cmd_append("PATH", r"{program_files}\Meson"),
             cmd_cd("ext"),
-            "@echo ::group::Building libyuv",
-            cmd_rmdir("libyuv"),
-            "cmd.exe /c libyuv.cmd",
-            "@echo ::endgroup::",
             "@echo ::group::Building SVT-AV1",
             cmd_rmdir("SVT-AV1"),
             "cmd.exe /c svt.cmd",
@@ -176,7 +172,6 @@ deps = {
             cmd_cmake(
                 [
                     "-DBUILD_SHARED_LIBS=OFF",
-                    "-DAVIF_LOCAL_LIBYUV=ON",
                     "-DAVIF_CODEC_AOM=ON",
                     "-DAVIF_LOCAL_AOM=ON",
                     "-DAVIF_CODEC_DAV1D=ON",
@@ -194,7 +189,6 @@ deps = {
                 r"ext\aom\build.libavif\aom.lib",
                 r"ext\dav1d\build\src\libdav1d.a",
                 r"ext\SVT-AV1\Bin\Release\SvtAv1Enc.lib",
-                r"ext\libyuv\build\yuv.lib",
             ),
             cmd_mkdir(r"{inc_dir}\avif"),
             cmd_copy(r"include\avif\avif.h", r"{inc_dir}\avif"),
