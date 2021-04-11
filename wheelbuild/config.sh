@@ -340,3 +340,36 @@ function run_tests {
     # Runs tests on installed distribution from an empty directory
     (cd ../pillow-avif-plugin && pytest)
 }
+
+
+# Work around flakiness of pip install with python 2.7
+if [ "$PYTHON_VERSION" == "2.7" ]; then
+    function pip_install {
+        if [ "$1" == "retry" ]; then
+            shift
+            echo ""
+            echo Retrying pip install $@
+        else
+            echo Running pip install $@
+        fi
+        echo ""
+        $PIP_CMD install $(pip_opts) $@
+    }
+
+    function install_run {
+        if [ -n "$TEST_DEPENDS" ]; then
+            while read TEST_DEPENDENCY; do
+                pip_install $TEST_DEPENDENCY \
+                    || pip_install retry $TEST_DEPENDENCY \
+                    || pip_install retry $TEST_DEPENDENCY \
+                    || pip_install retry $TEST_DEPENDENCY
+            done <<< "$TEST_DEPENDS"
+            TEST_DEPENDS=""
+        fi
+
+        install_wheel
+        mkdir tmp_for_test
+        (cd tmp_for_test && run_tests)
+        rmdir tmp_for_test  2>/dev/null || echo "Cannot remove tmp_for_test"
+    }
+fi
