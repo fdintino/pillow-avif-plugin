@@ -540,12 +540,12 @@ class TestAvifAnimation:
                 # Compare first and second-to-last frames to the original animated GIF
                 orig.load()
                 im.load()
-                assert_image_similar(im, orig.convert("RGBA"), 25.0)
+                assert_image_similar(im.convert("RGB"), orig.convert("RGB"), 25.0)
                 orig.seek(orig.n_frames - 2)
                 im.seek(im.n_frames - 2)
                 orig.load()
                 im.load()
-                assert_image_similar(im, orig.convert("RGBA"), 25.0)
+                assert_image_similar(im.convert("RGB"), orig.convert("RGB"), 25.0)
 
     def test_write_animation_RGB(self, tmp_path):
         """
