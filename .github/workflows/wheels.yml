@@ -68,7 +68,7 @@ jobs:
         with:
           repository: matthew-brett/multibuild
           path: multibuild
-          ref: 0d93db5422d6677aac5cf0ff4ecb731e5e629aa0
+          ref: 7684e52bcb023d511c4f17b638d497203f218a68
 
       - uses: actions/setup-python@v2
         with:
