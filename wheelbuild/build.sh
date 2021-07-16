@@ -11,11 +11,7 @@ if [[ "$MB_PYTHON_VERSION" == pypy3* ]]; then
 fi
 
 if [[ "$MB_PYTHON_VERSION" == "2.7" ]]; then
-    for f in multibuild/osx_utils.sh multibuild/common_utils.sh; do
-        perl -pi -e \
-        's#\Qhttps://bootstrap.pypa.io/get-pip.py\E#https://bootstrap.pypa.io/pip/2.7/get-pip.py#g' \
-        $f
-    done
+    DOCKER_TEST_IMAGE="fdintino/trusty-multibuild:$PLAT"
 fi
 
 echo "::group::Install a virtualenv"
