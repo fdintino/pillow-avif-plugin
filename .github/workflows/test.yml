@@ -94,8 +94,64 @@ jobs:
       env:
         CODECOV_NAME: ${{ matrix.os }} Python ${{ matrix.python-version }}
 
+  msys:
+    runs-on: windows-2019
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mingw: ["MINGW32", "MINGW64"]
+        python-version: ["2", "3"]
+        include:
+          - mingw: "MINGW32"
+            name: "MSYS2 MinGW 32-bit"
+            package: "mingw-w64-i686"
+          - mingw: "MINGW64"
+            name: "MSYS2 MinGW 64-bit"
+            package: "mingw-w64-x86_64"
+
+    defaults:
+      run:
+        shell: bash.exe --login -eo pipefail "{0}"
+    env:
+      MSYSTEM: ${{ matrix.mingw }}
+      CHERE_INVOKING: 1
+
+    timeout-minutes: 30
+    name: ${{ matrix.name }} python ${{ matrix.python-version }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up shell
+        run: echo "C:\msys64\usr\bin\" >> $env:GITHUB_PATH
+        shell: pwsh
+
+      - name: Install Dependencies
+        run: |
+          pacman -S --noconfirm \
+              ${{ matrix.package }}-python${{ matrix.python-version }}-pip \
+              ${{ matrix.package }}-python${{ matrix.python-version }}-setuptools \
+              ${{ matrix.package }}-libavif
+
+          python${{ matrix.python-version }} -m pip install pytest pytest-cov pillow mock
+
+      - name: Build pillow-avif-plugin
+        run: CFLAGS="-coverage" python${{ matrix.python-version }} setup.py build_ext install
+
+      - name: Test pillow-avif-plugin
+        run: |
+          python${{ matrix.python-version }} -m pytest -vx --cov pillow_avif --cov tests --cov-report term --cov-report xml tests
+
+      - name: Upload coverage
+        run: |
+          python${{ matrix.python-version }} -m pip install codecov
+          bash <(curl -s https://codecov.io/bash) -F GHA_Windows
+        env:
+          CODECOV_NAME: ${{ matrix.name }}
+
   success:
-    needs: build
+    needs: [build, msys]
     runs-on: ubuntu-latest
     name: Test Successful
     steps:
