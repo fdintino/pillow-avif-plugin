@@ -24,6 +24,7 @@ from .helper import (
     assert_image_similar,
     assert_image_similar_tofile,
     hopper,
+    has_alpha_premultiplied,
 )
 
 from pillow_avif import _avif
@@ -70,6 +71,17 @@ def skip_unless_avif_encoder(codec_name):
     return pytest.mark.skipif(
         not _avif or not _avif.encoder_codec_available(codec_name), reason=reason
     )
+
+
+def skip_unless_avif_version_gte(version):
+    if not _avif:
+        reason = "AVIF unavailable"
+        should_skip = True
+    else:
+        version_str = ".".join([str(v) for v in version])
+        reason = "%s < %s" % (_avif.libavif_version, version_str)
+        should_skip = _avif.VERSION < version
+    return pytest.mark.skipif(should_skip, reason=reason)
 
 
 class TestUnsupportedAvif:
@@ -592,6 +604,15 @@ class TestAvifAnimation:
         frame2 = Image.new("RGB", (150, 150))
         with pytest.raises(ValueError):
             frame1.save(temp_file, save_all=True, append_images=[frame2], duration=100)
+
+    @skip_unless_avif_version_gte((0, 9, 0))
+    @pytest.mark.parametrize("alpha_premultipled", [False, True])
+    def test_alpha_premultiplied_true(self, alpha_premultipled):
+        im = Image.new("RGBA", (10, 10), (0, 0, 0, 0))
+        im_buf = BytesIO()
+        im.save(im_buf, "AVIF", alpha_premultiplied=alpha_premultipled)
+        im_bytes = im_buf.getvalue()
+        assert has_alpha_premultiplied(im_bytes) is alpha_premultipled
 
     def test_timestamp_and_duration(self, tmp_path):
         """

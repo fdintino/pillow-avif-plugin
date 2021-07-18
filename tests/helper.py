@@ -3,8 +3,10 @@ Helper functions (from Pillow).
 """
 
 import gc
+from io import BytesIO
 import logging
 import os
+from struct import unpack
 import sys
 import tempfile
 
@@ -169,3 +171,44 @@ def hopper(mode=None, cache={}):
             im = hopper().convert(mode)
         cache[mode] = im
     return im.copy()
+
+
+def is_ascii(s):
+    for char in s:
+        if isinstance(char, str):
+            char = ord(char)
+        if char < 0x20 or char > 0x7e:
+            return False
+    return True
+
+
+def has_alpha_premultiplied(im_bytes):
+    stream = BytesIO(im_bytes)
+    length = len(im_bytes)
+    while stream.tell() < length:
+        start = stream.tell()
+        size, boxtype = unpack(">L4s", stream.read(8))
+        if not is_ascii(boxtype):
+            return False
+        if size == 1:  # 64bit size
+            size, = unpack(">Q", stream.read(8))
+        end = start + size
+        version, _ = unpack(">B3s", stream.read(4))
+        if boxtype in (b"ftyp", b"hdlr", b"pitm", b"iloc", b"iinf"):
+            # Skip these boxes
+            stream.seek(end)
+            continue
+        elif boxtype == b"meta":
+            # Container box possibly including iref prem, continue to parse boxes
+            # inside it
+            continue
+        elif boxtype == b"iref":
+            while stream.tell() < end:
+                _, iref_type = unpack(">L4s", stream.read(8))
+                version, _ = unpack(">B3s", stream.read(4))
+                if iref_type == b"prem":
+                    return True
+                stream.read(2 if version == 0 else 4)
+        else:
+            return False
+    return False

@@ -133,6 +133,9 @@ def _save(im, fp, filename, save_all=False):
     speed = info.get("speed", 8)
     codec = info.get("codec", "auto")
     range_ = info.get("range", "full")
+    tile_rows_log2 = info.get("tile_rows", 0)
+    tile_cols_log2 = info.get("tile_rows", 0)
+    alpha_premultiplied = bool(info.get("alpha_premultiplied", False))
 
     icc_profile = info.get("icc_profile", im.info.get("icc_profile"))
     exif = info.get("exif", im.info.get("exif"))
@@ -153,6 +156,9 @@ def _save(im, fp, filename, save_all=False):
         speed,
         codec,
         range_,
+        tile_rows_log2,
+        tile_cols_log2,
+        alpha_premultiplied,
         icc_profile or b"",
         exif or b"",
         xmp or b"",
