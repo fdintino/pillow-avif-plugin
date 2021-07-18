@@ -408,6 +408,28 @@ class TestFileAvif:
             with pytest.raises(ValueError):
                 im.save(test_file, codec="dav1d")
 
+    @skip_unless_avif_encoder("aom")
+    @skip_unless_avif_version_gte((0, 8, 2))
+    def test_encoder_advanced_codec_options(self):
+        with Image.open(TEST_AVIF_FILE) as im:
+            ctrl_buf = BytesIO()
+            im.save(ctrl_buf, "AVIF", codec="aom")
+            test_buf = BytesIO()
+            im.save(test_buf, "AVIF", codec="aom", advanced={
+                "aq-mode": "1",
+                "enable-chroma-deltaq": "1",
+            })
+            assert ctrl_buf.getvalue() != test_buf.getvalue()
+
+    @skip_unless_avif_encoder("aom")
+    @skip_unless_avif_version_gte((0, 8, 2))
+    @pytest.mark.parametrize("val", [{"foo": "bar"}, 1234])
+    def test_encoder_advanced_codec_options_invalid(self, tmp_path, val):
+        with Image.open(TEST_AVIF_FILE) as im:
+            test_file = str(tmp_path / "temp.avif")
+            with pytest.raises(ValueError):
+                im.save(test_file, codec="aom", advanced=val)
+
     @skip_unless_avif_decoder("aom")
     def test_decoder_codec_param(self):
         AvifImagePlugin.DECODE_CODEC_CHOICE = "aom"

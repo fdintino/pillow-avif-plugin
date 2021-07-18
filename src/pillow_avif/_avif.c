@@ -121,12 +121,12 @@ normalize_tiles_log2(int value) {
     }
 }
 
-
 static PyObject *
 exc_type_for_avif_result(avifResult result) {
     switch (result) {
         case AVIF_RESULT_INVALID_FTYP:
         case AVIF_RESULT_INVALID_EXIF_PAYLOAD:
+        case AVIF_RESULT_INVALID_CODEC_SPECIFIC_OPTION:
             return PyExc_ValueError;
         case AVIF_RESULT_BMFF_PARSE_FAILED:
         case AVIF_RESULT_TRUNCATED_DATA:
@@ -167,6 +167,32 @@ _encoder_codec_available(PyObject *self, PyObject *args) {
     return PyBool_FromLong(is_available);
 }
 
+static void
+_add_codec_specific_options(avifEncoder *encoder, PyObject *opts) {
+    Py_ssize_t i, size;
+    PyObject *keyval, *py_key, *py_val;
+    char *key, *val;
+    if (!PyTuple_Check(opts)) {
+        return;
+    }
+    size = PyTuple_GET_SIZE(opts);
+
+    for (i = 0; i < size; i++) {
+        keyval = PyTuple_GetItem(opts, i);
+        if (!PyTuple_Check(keyval) || PyTuple_GET_SIZE(keyval) != 2) {
+            return;
+        }
+        py_key = PyTuple_GetItem(keyval, 0);
+        py_val = PyTuple_GetItem(keyval, 1);
+        if (!PyBytes_Check(py_key) || !PyBytes_Check(py_val)) {
+            return;
+        }
+        key = PyBytes_AsString(py_key);
+        val = PyBytes_AsString(py_val);
+        avifEncoderSetCodecSpecificOption(encoder, key, val);
+    }
+}
+
 // Encoder functions
 PyObject *
 AvifEncoderNew(PyObject *self_, PyObject *args) {
@@ -189,9 +215,11 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
     char *codec = "auto";
     char *range = "full";
 
+    PyObject *advanced;
+
     if (!PyArg_ParseTuple(
             args,
-            "IIsiiissiiOSSS",
+            "IIsiiissiiOSSSO",
             &width,
             &height,
             &subsampling,
@@ -205,7 +233,8 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
             &alpha_premultiplied,
             &icc_bytes,
             &exif_bytes,
-            &xmp_bytes)) {
+            &xmp_bytes,
+            &advanced)) {
         return NULL;
     }
 
@@ -294,6 +323,11 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
         encoder->timescale = (uint64_t)1000;
         encoder->tileRowsLog2 = enc_options.tile_rows_log2;
         encoder->tileColsLog2 = enc_options.tile_cols_log2;
+
+#if AVIF_VERSION >= 80200
+        _add_codec_specific_options(encoder, advanced);
+#endif
+
         self->encoder = encoder;
 
         avifImage *image = avifImageCreateEmpty();

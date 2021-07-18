@@ -146,6 +146,24 @@ def _save(im, fp, filename, save_all=False):
     if isinstance(xmp, text_type):
         xmp = xmp.encode('utf-8')
 
+    advanced = info.get("advanced")
+    if isinstance(advanced, dict):
+        advanced = tuple([k, v] for (k, v) in advanced.items())
+    if advanced is not None:
+        try:
+            advanced = tuple(advanced)
+        except TypeError:
+            invalid = True
+        else:
+            invalid = all(isinstance(v, tuple) and len(v) == 2 for v in advanced)
+        if invalid:
+            raise ValueError(
+                "advanced codec options must be a dict of key-value string "
+                "pairs or a series of key-value two-tuples")
+        advanced = tuple([
+            (str(k).encode("utf-8"), str(v).encode("utf-8"))
+            for k, v in advanced])
+
     # Setup the AVIF encoder
     enc = _avif.AvifEncoder(
         im.size[0],
@@ -162,6 +180,7 @@ def _save(im, fp, filename, save_all=False):
         icc_profile or b"",
         exif or b"",
         xmp or b"",
+        advanced
     )
 
     # Add each frame
