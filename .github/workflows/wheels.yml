@@ -35,8 +35,6 @@ jobs:
             manylinux-version: "2010"
           - python: "pypy3.6-7.3"
             manylinux-version: "2010"
-          - python: "2.7"
-            manylinux-version: "2010"
         include:
           - os: "macos-latest"
             os-name: "osx"

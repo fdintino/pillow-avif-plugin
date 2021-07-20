@@ -12,6 +12,9 @@ fi
 
 if [[ "$MB_PYTHON_VERSION" == "2.7" ]]; then
     DOCKER_TEST_IMAGE="fdintino/trusty-multibuild:$PLAT"
+    if [[ "$MB_ML_VER" == "2010" ]]; then
+        DOCKER_IMAGE="quay.io/pypa/manylinux${MB_ML_VER}_$PLAT:2021-02-06-3d322a5"
+    fi
 fi
 
 echo "::group::Install a virtualenv"

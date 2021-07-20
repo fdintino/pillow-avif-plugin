@@ -20,7 +20,7 @@ function install_meson {
     if [ -n "$IS_MACOS" ]; then
         brew install meson
     else
-        if [ "$PYTHON_VERSION" == "2.7" ]; then
+        if [ "$MB_PYTHON_VERSION" == "2.7" ]; then
             local python39_exe=$(cpython_path 3.9)/bin/python
             $python39_exe -m pip install meson
             local meson_exe=$(dirname $python39_exe)/meson
@@ -334,7 +334,7 @@ function pre_build {
 }
 
 function run_tests {
-    if [ "$PYTHON_VERSION" == "2.7" ]; then
+    if ! $PYTHON_EXE -m unittest.mock 2>&1 2>/dev/null; then
         $PYTHON_EXE -m pip install mock
     fi
     # Runs tests on installed distribution from an empty directory
@@ -343,7 +343,7 @@ function run_tests {
 
 
 # Work around flakiness of pip install with python 2.7
-if [ "$PYTHON_VERSION" == "2.7" ]; then
+if [ "$MB_PYTHON_VERSION" == "2.7" ]; then
     function pip_install {
         if [ "$1" == "retry" ]; then
             shift
