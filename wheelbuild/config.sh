@@ -41,9 +41,13 @@ function install_meson {
 function install_ninja {
     if [ -e ninja-stamp ]; then return; fi
     echo "::group::Install ninja"
-    $PYTHON_EXE -m pip install ninja
-    local ninja_exe=$(dirname $PYTHON_EXE)/ninja
-    ln -s $ninja_exe /usr/local/bin/ninja-build
+    if [ -n "$IS_MACOS" ]; then
+        brew install ninja
+    else
+        $PYTHON_EXE -m pip install ninja
+        local ninja_exe=$(dirname $PYTHON_EXE)/ninja
+        ln -s $ninja_exe /usr/local/bin/ninja-build
+    fi
     echo "::endgroup::"
     touch ninja-stamp
 }
@@ -52,7 +56,12 @@ function install_rust {
     if [ -e rust-stamp ]; then return; fi
     echo "::group::Install rust"
     if [ -n "$IS_MACOS" ]; then
-        brew install rust
+        if [ "$PLAT" == "arm64" ]; then
+            brew install rustup-init
+            rustup-init -y --target aarch64-apple-darwin
+        else
+            brew install rust
+        fi
     else
         if [[ "$MB_ML_VER" == "1" ]]; then
             # Download and use old rustup-init that's compatible with glibc on el5
@@ -93,7 +102,9 @@ function build_aom {
 
     echo "::group::Build aom"    
 
-    if [ -n "$IS_MACOS" ]; then
+    local cmake_flags=()
+
+    if [ -n "$IS_MACOS" ] && [ "$PLAT" != "arm64" ]; then
         brew install aom
     else
         (rm_mkdir aom-$AOM_VERSION \
@@ -105,10 +116,18 @@ function build_aom {
             (cd aom-$AOM_VERSION \
                 && patch -p1 -i $CONFIG_DIR/aom-2.0.2-manylinux1.patch)
         fi
-        mkdir aom-$AOM_VERSION/build/linux
-        (cd aom-$AOM_VERSION/build/linux \
+        if [ ! -n "$IS_MACOS" ]; then
+            cmake_flags+=("-DCMAKE_C_FLAGS=-fPIC")
+        elif [ "$PLAT" == "arm64" ]; then
+            cmake_flags+=(\
+                -DAOM_TARGET_CPU=arm64 \
+                -DCONFIG_RUNTIME_CPU_DETECT=0 \
+                -DCMAKE_SYSTEM_PROCESSOR=arm64 \
+                -DCMAKE_OSX_ARCHITECTURES=arm64)
+        fi
+        mkdir aom-$AOM_VERSION/build/work
+        (cd aom-$AOM_VERSION/build/work \
             && cmake \
-                -DCMAKE_C_FLAGS=-fPIC \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_INSTALL_PREFIX="${BUILD_PREFIX}" \
                 -DCMAKE_INSTALL_LIBDIR=lib \
@@ -118,6 +137,7 @@ function build_aom {
                 -DENABLE_TESTDATA=0 \
                 -DENABLE_TESTS=0 \
                 -DENABLE_TOOLS=0 \
+                "${cmake_flags[@]}" \
                 ../.. \
             && make install)
     fi
@@ -132,13 +152,43 @@ function build_dav1d {
     install_meson
     install_ninja
 
+    local cflags="$CFLAGS"
+    local ldflags="$LDFLAGS"
+    local meson_flags=()
+
     echo "::group::Build dav1d"
     fetch_unpack "https://code.videolan.org/videolan/dav1d/-/archive/$DAV1D_VERSION/dav1d-$DAV1D_VERSION.tar.gz"
+
+    cat <<EOF > dav1d-$DAV1D_VERSION/config.txt
+[binaries]
+c     = 'clang'
+cpp   = 'clang++'
+ar    = 'ar'
+ld    = 'ld'
+strip = 'strip'
+[built-in options]
+c_args = '$CFLAGS'
+c_link_args = '$LDFLAGS'
+[host_machine]
+system = 'darwin'
+cpu_family = 'aarch64'
+cpu = 'arm'
+endian = 'little'
+EOF
+
+    if [ "$PLAT" == "arm64" ]; then
+        cflags=""
+        ldflags=""
+        meson_flags+=(-D enable_asm=false --cross-file config.txt)
+    fi
+
     (cd dav1d-$DAV1D_VERSION \
-        && meson . build \
+        && CFLAGS="$cflags" LDFLAGS="$ldflags" \
+           meson . build \
               "--prefix=${BUILD_PREFIX}" \
               --default-library=static \
               --buildtype=release \
+             "${meson_flags[@]}" \
         && ninja -vC build install)
     echo "::endgroup::"
     touch dav1d-stamp
@@ -194,8 +244,17 @@ EOF
     perl -p0i -e 's/(?<=fn rustc_version_check\(\) {).*?(?=\n}\n)//ms' \
         rav1e-$RAV1E_VERSION/build.rs
 
+    local cargo_c_flags=()
+    if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
+        cargo_c_flags+=(--target=aarch64-apple-darwin)
+    fi
+
     (cd rav1e-$RAV1E_VERSION \
-        && cargo cinstall --release --library-type=staticlib "--prefix=$BUILD_PREFIX")
+        && cargo cinstall \
+            --release \
+            --library-type=staticlib \
+            "--prefix=$BUILD_PREFIX" \
+            "${cargo_c_flags[@]}")
 
     if [ ! -n "$IS_MACOS" ]; then
         sed -i 's/-lgcc_s/-lgcc_eh/g' "${BUILD_PREFIX}/lib/pkgconfig/rav1e.pc"
@@ -213,7 +272,7 @@ function build_libavif {
     build_dav1d
     LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_DAV1D=ON)
 
-    if [ "$PLAT" != "i686" ]; then
+    if [ "$PLAT" == "x86_64" ]; then
         if [ -n "$IS_MACOS" ]; then
             build_svt_av1
             LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=ON)
@@ -235,6 +294,11 @@ function build_libavif {
         LIBAVIF_CMAKE_FLAGS+=(\
             "-DCMAKE_INSTALL_NAME_DIR=$BUILD_PREFIX/lib" \
             -DCMAKE_MACOSX_RPATH=OFF)
+        if [ "$PLAT" == "arm64" ]; then
+            LIBAVIF_CMAKE_FLAGS+=(\
+                -DCMAKE_SYSTEM_PROCESSOR=arm64 \
+                -DCMAKE_OSX_ARCHITECTURES=arm64)
+        fi
     fi
 
     echo "::group::Build libavif"
@@ -317,7 +381,9 @@ function pre_build {
     local libavif_build_dir="$REPO_DIR/depends/libavif-$LIBAVIF_VERSION/build"
 
     if [ ! -e "$libavif_build_dir" ]; then
-        build_nasm
+        if [ "$PLAT" != "arm64" ]; then
+            build_nasm
+        fi
         install_cmake
         install_ninja
         install_meson

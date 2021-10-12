@@ -22,6 +22,7 @@ jobs:
         python: [ "pypy3.7-7.3.3", "pypy3.6-7.3", "2.7", "3.6", "3.7", "3.8", "3.9", "3.10" ]
         platform: [ "x86_64", "i686" ]
         manylinux-version: [ "1", "2010" ]
+        macos-target: [ "10.10" ]
         exclude:
           - os: "macOS-10.15"
             platform: "i686"
@@ -46,12 +47,38 @@ jobs:
           - os: "ubuntu-20.04"
             manylinux-version: "2010"
             os-name: "manylinux2010"
+          - os: "macos-11"
+            os-name: "osx"
+            platform: "arm64"
+            python: "3.10"
+            macos-target: "11.0"
+          - os: "macos-11"
+            os-name: "osx"
+            platform: "arm64"
+            python: "3.9"
+            macos-target: "11.0"
+          - os: "macos-11"
+            os-name: "osx"
+            platform: "arm64"
+            python: "3.8"
+            macos-target: "11.0"
+          - os: "macos-11"
+            os-name: "osx"
+            platform: "arm64"
+            python: "3.7"
+            macos-target: "11.0"
+          - os: "macos-11"
+            os-name: "osx"
+            platform: "arm64"
+            python: "2.7"
+            macos-target: "11.0"
     env:
       BUILD_COMMIT: HEAD
       PLAT: ${{ matrix.platform }}
       MB_PYTHON_VERSION: ${{ matrix.python }}
       TRAVIS_OS_NAME: ${{ matrix.os-name }}
       MB_ML_VER: ${{ matrix.manylinux-version }}
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos-target }}
     steps:
       - uses: actions/checkout@v2
         with:

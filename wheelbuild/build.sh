@@ -33,5 +33,9 @@ echo "::group::Setup wheel installation"
 echo "::endgroup::"
 
 echo "::group::Test wheel"
-  install_run $PLAT
+  if [ "$PLAT" == "arm64" ]; then
+    echo "Skipping test for Apple Silicon"
+  else
+    install_run $PLAT
+  fi
 echo "::endgroup::"
