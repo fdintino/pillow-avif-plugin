@@ -9,7 +9,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [
-          "ubuntu-latest",
+          "ubuntu-20.04",
           "macOS-latest",
         ]
         python-version: [
@@ -26,7 +26,7 @@ jobs:
         - python-version: "3.7"
           PYTHONOPTIMIZE: 2
         # Include new variables for Codecov
-        - os: ubuntu-latest
+        - os: ubuntu-20.04
           codecov-flag: GHA_Ubuntu
         - os: macOS-latest
           codecov-flag: GHA_macOS
@@ -152,7 +152,7 @@ jobs:
 
   success:
     needs: [build, msys]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     name: Test Successful
     steps:
       - name: Success
