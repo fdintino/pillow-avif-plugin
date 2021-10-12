@@ -29,13 +29,10 @@ else
 fi
 
 python3 -m pip install -U pip
+python3 -m pip install -U wheel
 python3 -m pip install setuptools wheel
 
 export PATH="$HOME/.local/bin:$PATH"
-
-# TODO Remove when 3.8 / 3.9 includes setuptools 49.3.2+:
-if [ "$GHA_PYTHON_VERSION" == "3.8" ]; then python3 -m pip install -U "setuptools>=49.3.2" ; fi
-if [ "$GHA_PYTHON_VERSION" == "3.9" ]; then python3 -m pip install -U "setuptools>=49.3.2" ; fi
 
 # libavif
 if [ ! -d depends/libavif-$LIBAVIF_VERSION ]; then
