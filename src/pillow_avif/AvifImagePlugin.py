@@ -27,12 +27,26 @@ else:
 
 
 def _accept(prefix):
-    if prefix[4:12] in (b"ftypavif", b"ftypavis"):
+    if prefix[4:8] != b"ftyp":
+        return
+    coding_brands = (b"avif", b"avis")
+    container_brands = (b"mif1", b"msf1")
+    major_brand = prefix[8:12]
+    if major_brand in coding_brands:
         if not SUPPORTED:
             return (
                 "image file could not be identified because AVIF "
                 "support not installed"
             )
+        return True
+    if major_brand in container_brands:
+        # We accept files with AVIF container brands; we can't yet know if
+        # the ftyp box has the correct compatible brands, but if it doesn't
+        # then the plugin will raise a SyntaxError which Pillow will catch
+        # before moving on to the next plugin that accepts the file.
+        #
+        # Also, because this file might not actually be an AVIF file, we
+        # don't raise an error if AVIF support isn't properly compiled.
         return True
 
 

@@ -174,6 +174,11 @@ class TestFileAvif:
         with pytest.raises(TypeError):
             _avif.AvifDecoder()
 
+    @pytest.mark.parametrize("major_brand", [b"avif", b"avis", b"mif1", b"msf1"])
+    def test_accept_ftyp_brands(self, major_brand):
+        data = b'\x00\x00\x00\x1cftyp%s\x00\x00\x00\x00' % major_brand
+        assert AvifImagePlugin._accept(data) is True
+
     def test_no_resource_warning(self, tmp_path):
         with Image.open(TEST_AVIF_FILE) as image:
             temp_file = str(tmp_path / "temp.avif")
