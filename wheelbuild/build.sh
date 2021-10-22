@@ -2,6 +2,10 @@
 
 set -eo pipefail
 
+if [[ "$MB_ML_VER" == "1" ]]; then
+    DOCKER_IMAGE="fdintino/manylinux${MB_ML_VER}_$PLAT"
+fi
+
 if [[ "$MB_PYTHON_VERSION" == pypy3* ]]; then
   if [[ "$TRAVIS_OS_NAME" != "macos-latest" ]]; then
     DOCKER_TEST_IMAGE="multibuild/xenial_$PLAT"

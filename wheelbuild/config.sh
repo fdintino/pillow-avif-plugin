@@ -4,12 +4,16 @@ set -exo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=0.9.2
-CARGO_C_VERSION=0.8.0
-AOM_VERSION=2.0.2
+LIBAVIF_VERSION=0.9.3
+CARGO_C_VERSION=0.9.5
+AOM_VERSION=3.2.0
 DAV1D_VERSION=0.9.2
 SVT_AV1_VERSION=0.8.7
-RAV1E_VERSION=0.4.0
+RAV1E_VERSION=0.4.1
+
+if [[ "$MB_ML_VER" == "1" ]]; then
+    CARGO_C_VERSION=0.7.2
+fi
 
 function install_meson {
     if [ -e meson-stamp ]; then return; fi
@@ -87,12 +91,35 @@ function install_cargo_c {
     echo "::group::Install cargo-c"
     if [ -n "$IS_MACOS" ]; then
         brew install cargo-c
+    elif [ "$PLAT" != "x86_64" ]; then
+        if [[ "$MB_ML_VER" == "1" ]]; then
+            build_openssl
+        fi
+        CARGO_C_VENDOR_TGZ=$ARCHIVE_SDIR/cargo-c-vendor-$CARGO_C_VERSION.tar.gz
+        if [ -e $CARGO_C_VENDOR_TGZ ]; then
+            mkdir -p "$HOME/.cargo"
+            VENDOR_DIR=$(pwd -P)/$ARCHIVE_SDIR/vendor
+            rm -rf $VENDOR_DIR
+            tar -C $ARCHIVE_SDIR -zxf $CARGO_C_VENDOR_TGZ
+            cat > ~/.cargo/config <<EOF
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "$VENDOR_DIR"
+EOF
+        fi
+        fetch_unpack \
+            "https://github.com/lu-zero/cargo-c/archive/refs/tags/v$CARGO_C_VERSION.tar.gz" \
+            "cargo-c-$CARGO_C_VERSION.tar.gz"
+        (cd cargo-c-$CARGO_C_VERSION \
+            && cargo install --path .)
     else
         mkdir -p $HOME/.cargo/bin
-        (cd $HOME/.cargo/bin \
-            && fetch_unpack \
-                https://github.com/lu-zero/cargo-c/releases/download/v$CARGO_C_VERSION/cargo-c-linux.tar.gz \
-                cargo-c-$CARGO_C_VERSION-linux.tar.gz)
+        fetch_unpack \
+            https://github.com/lu-zero/cargo-c/releases/download/v$CARGO_C_VERSION/cargo-c-linux.tar.gz \
+            cargo-c-$CARGO_C_VERSION-linux.tar.gz
+        mv cargo-c{api,build,install} $HOME/.cargo/bin
     fi
     echo "::endgroup::"
 }
@@ -179,7 +206,7 @@ EOF
     if [ "$PLAT" == "arm64" ]; then
         cflags=""
         ldflags=""
-        meson_flags+=(-D enable_asm=false --cross-file config.txt)
+        meson_flags+=(--cross-file config.txt)
     fi
 
     (cd dav1d-$DAV1D_VERSION \
@@ -222,11 +249,12 @@ function build_rav1e {
 
     echo "::group::Build rav1e"
 
-    LIBAVIF_CARGO_VENDOR_TGZ=$ARCHIVE_SDIR/libavif-rav1e-cargo-vendor-$LIBAVIF_VERSION.tar.gz
-    if [ -e $LIBAVIF_CARGO_VENDOR_TGZ ]; then
+    RAV1E_CARGO_VENDOR_TGZ=$ARCHIVE_SDIR/rav1e-vendor-$RAV1E_VERSION.tar.gz
+    if [ -e $RAV1E_CARGO_VENDOR_TGZ ]; then
         mkdir -p "$HOME/.cargo"
-        tar -C $ARCHIVE_SDIR -zxf $LIBAVIF_CARGO_VENDOR_TGZ
         VENDOR_DIR=$(pwd -P)/$ARCHIVE_SDIR/vendor
+        rm -rf $VENDOR_DIR
+        tar -C $ARCHIVE_SDIR -zxf $RAV1E_CARGO_VENDOR_TGZ
         cat > ~/.cargo/config <<EOF
 [source.crates-io]
 replace-with = "vendored-sources"
@@ -283,10 +311,8 @@ function build_libavif {
         fi
     fi
 
-    if [[ "$PLAT" != "i686" ]]; then
-        build_rav1e
-        LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_RAV1E=ON)
-    fi
+    build_rav1e
+    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_RAV1E=ON)
 
     if [ -n "$IS_MACOS" ]; then
         # Prevent cmake from using @rpath in install id, so that delocate can
@@ -341,6 +367,26 @@ function install_zlib {
         build_zlib
         echo "::endgroup::"
     fi
+}
+
+function build_openssl {
+    if [ -e openssl-stamp ]; then return; fi
+    echo "::group::Building openssl"
+    if [[ "$MB_ML_VER" == "1" ]]; then
+        # Install new Perl because OpenSSL configure scripts require > 5.10.0.
+        curl -L https://install.perlbrew.pl | bash
+        source $HOME/perl5/perlbrew/etc/bashrc
+        perlbrew install -j 3 --notest perl-5.16.0
+        perlbrew use perl-5.16.0
+    fi
+    fetch_unpack ${OPENSSL_DOWNLOAD_URL}/${OPENSSL_ROOT}.tar.gz
+    check_sha256sum $ARCHIVE_SDIR/${OPENSSL_ROOT}.tar.gz ${OPENSSL_HASH}
+    (cd ${OPENSSL_ROOT} \
+        && ./config no-ssl2 no-shared no-tests -fPIC --prefix=$BUILD_PREFIX \
+        && make -j4 \
+        && make install_sw)
+    touch openssl-stamp
+    echo "::endgroup::"
 }
 
 function ensure_openssl {
@@ -406,7 +452,6 @@ function run_tests {
     # Runs tests on installed distribution from an empty directory
     (cd ../pillow-avif-plugin && pytest)
 }
-
 
 # Work around flakiness of pip install with python 2.7
 if [ "$MB_PYTHON_VERSION" == "2.7" ]; then
