@@ -101,40 +101,54 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mingw: ["MINGW32", "MINGW64"]
+        msystem: [ "mingw32", "mingw64" ]
         python-version: ["2", "3"]
         include:
-          - mingw: "MINGW32"
+          - msystem: "mingw32"
             name: "MSYS2 MinGW 32-bit"
             package: "mingw-w64-i686"
-          - mingw: "MINGW64"
+            env: i686
+          - msystem: "mingw64"
             name: "MSYS2 MinGW 64-bit"
             package: "mingw-w64-x86_64"
+            env: x86_64
+        exclude:
+          - msystem: "mingw32"
+            python-version: "2"
+
+    name: ${{ matrix.name }} python ${{ matrix.python-version }}
 
     defaults:
       run:
-        shell: bash.exe --login -eo pipefail "{0}"
+        shell: msys2 {0}
+
     env:
-      MSYSTEM: ${{ matrix.mingw }}
+      MSYSTEM: ${{ matrix.msystem }}
       CHERE_INVOKING: 1
 
     timeout-minutes: 30
-    name: ${{ matrix.name }} python ${{ matrix.python-version }}
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set up shell
-        run: echo "C:\msys64\usr\bin\" >> $env:GITHUB_PATH
-        shell: pwsh
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: >-
+            base-devel
+            git
+            ${{ matrix.package }}-toolchain
+            ${{ matrix.package }}-python${{ matrix.python-version }}-pip
+            ${{ matrix.package }}-python${{ matrix.python-version }}-setuptools
+            ${{ matrix.package }}-libjpeg-turbo
+            ${{ matrix.package }}-libtiff
+            ${{ matrix.package }}-libpng
+            ${{ matrix.package }}-openjpeg2
+            ${{ matrix.package }}-libavif
 
       - name: Install Dependencies
         run: |
-          pacman -S --noconfirm \
-              ${{ matrix.package }}-python${{ matrix.python-version }}-pip \
-              ${{ matrix.package }}-python${{ matrix.python-version }}-setuptools \
-              ${{ matrix.package }}-libavif
-
           python${{ matrix.python-version }} -m pip install pytest pytest-cov pillow mock
 
       - name: Build pillow-avif-plugin
