@@ -9,9 +9,11 @@ CARGO_C_VERSION=0.9.5
 AOM_VERSION=3.2.0
 DAV1D_VERSION=0.9.2
 SVT_AV1_VERSION=0.8.7
-RAV1E_VERSION=0.4.1
+RAV1E_VERSION=0.5.1
+export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
 
 if [[ "$MB_ML_VER" == "1" ]]; then
+    RAV1E_VERSION=0.4.1
     CARGO_C_VERSION=0.7.2
 fi
 
@@ -374,6 +376,9 @@ function build_openssl {
     echo "::group::Building openssl"
     if [[ "$MB_ML_VER" == "1" ]]; then
         # Install new Perl because OpenSSL configure scripts require > 5.10.0.
+        curl -L http://cpanmin.us | perl - App::cpanminus
+        cpanm File::Path
+        cpanm parent
         curl -L https://install.perlbrew.pl | bash
         source $HOME/perl5/perlbrew/etc/bashrc
         perlbrew install -j 3 --notest perl-5.16.0

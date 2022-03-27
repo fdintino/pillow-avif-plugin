@@ -93,9 +93,9 @@ jobs:
       - name: Checkout multibuild
         uses: actions/checkout@v2
         with:
-          repository: matthew-brett/multibuild
+          repository: multi-build/multibuild
           path: multibuild
-          ref: b89bb903e94308be79abefa4f436bf123ebb1313
+          ref: bce1637e202cb52b0e7ea42baa1cccc894b82806
 
       - uses: actions/setup-python@v2
         with:
