@@ -61,6 +61,12 @@ function install_ninja {
 function install_rust {
     if [ -e rust-stamp ]; then return; fi
     echo "::group::Install rust"
+
+    if [[ -n "$IS_ALPINE" ]]; then
+        # Increase pthread stack size for musl libc
+        export RUSTFLAGS="-C link-args=-Wl,-z,stack-size=2097152 -C target-feature=-crt-static"
+    fi
+
     if [ -n "$IS_MACOS" ]; then
         if [ "$PLAT" == "arm64" ]; then
             brew install rustup-init
@@ -93,7 +99,7 @@ function install_cargo_c {
     echo "::group::Install cargo-c"
     if [ -n "$IS_MACOS" ]; then
         brew install cargo-c
-    elif [ "$PLAT" != "x86_64" ]; then
+    elif [[ "$PLAT" != "x86_64" ]] || [[ -n "$IS_ALPINE" ]]; then
         if [[ "$MB_ML_VER" == "1" ]]; then
             build_openssl
         fi
@@ -231,6 +237,11 @@ function build_svt_av1 {
     fetch_unpack \
         "https://gitlab.com/AOMediaCodec/SVT-AV1/-/archive/v$SVT_AV1_VERSION/SVT-AV1-v$SVT_AV1_VERSION.tar.gz"
 
+    local extra_cmake_flags=()
+    if [ -n "$IS_ALPINE" ]; then
+        extra_cmake_flags+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
+    fi
+
     (cd SVT-AV1-v$SVT_AV1_VERSION/Build/linux \
         && cmake \
             ../.. \
@@ -238,6 +249,7 @@ function build_svt_av1 {
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_LIBDIR=lib \
+            "${extra_cmake_flags[@]}" \
         && make install \
         && cp SvtAv1Enc.pc $BUILD_PREFIX/lib/pkgconfig)
 
@@ -397,7 +409,13 @@ function build_openssl {
 function ensure_openssl {
     if [ ! -n "$IS_MACOS" ]; then
         echo "::group::Install openssl"
-        yum_install openssl-devel
+        if [ -n "$IS_ALPINE" ]; then
+            apk add libressl-dev openssl-dev
+        elif [[ $MB_ML_VER == "_2_24" ]]; then
+            apt-get install -y libssl-dev
+        else
+            yum_install openssl-devel
+        fi
         echo "::endgroup::"
     fi
 }
@@ -405,7 +423,13 @@ function ensure_openssl {
 function ensure_sudo {
     if [ ! -e /usr/bin/sudo ]; then
         echo "::group::Install sudo"
-        yum_install sudo
+        if [ -n "$IS_ALPINE" ]; then
+            apk add sudo
+        elif [[ $MB_ML_VER == "_2_24" ]]; then
+            apt-get install -y sudo
+        else
+            yum_install sudo
+        fi
         echo "::endgroup::"
     fi
 }

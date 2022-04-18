@@ -23,6 +23,7 @@ jobs:
         platform: [ "x86_64", "i686" ]
         manylinux-version: [ "1", "2010" ]
         macos-target: [ "10.10" ]
+        mb-ml-libc: [ "manylinux" ]
         exclude:
           - os: "macOS-10.15"
             platform: "i686"
@@ -72,6 +73,24 @@ jobs:
             platform: "arm64"
             python: "2.7"
             macos-target: "11.0"
+          - python: "3.8"
+            platform: "x86_64"
+            mb-ml-libc: "musllinux"
+            os: "ubuntu-20.04"
+            os-name: "musllinux"
+            manylinux-version: ""
+          - python: "3.9"
+            platform: "x86_64"
+            mb-ml-libc: "musllinux"
+            os: "ubuntu-20.04"
+            os-name: "musllinux"
+            manylinux-version: ""
+          - python: "3.10"
+            platform: "x86_64"
+            mb-ml-libc: "musllinux"
+            os: "ubuntu-20.04"
+            os-name: "musllinux"
+            manylinux-version: ""
     env:
       BUILD_COMMIT: HEAD
       PLAT: ${{ matrix.platform }}
@@ -79,6 +98,7 @@ jobs:
       TRAVIS_OS_NAME: ${{ matrix.os-name }}
       MB_ML_VER: ${{ matrix.manylinux-version }}
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos-target }}
+      MB_ML_LIBC: ${{ matrix.mb-ml-libc }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -95,7 +115,7 @@ jobs:
         with:
           repository: multi-build/multibuild
           path: multibuild
-          ref: bce1637e202cb52b0e7ea42baa1cccc894b82806
+          ref: 1d95c34a28b45c3877767318e5f4425dd1ede06d
 
       - uses: actions/setup-python@v2
         with:
