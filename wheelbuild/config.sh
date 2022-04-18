@@ -4,11 +4,11 @@ set -exo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=0.9.3
+LIBAVIF_VERSION=0.10.1
 CARGO_C_VERSION=0.9.5
-AOM_VERSION=3.2.0
-DAV1D_VERSION=0.9.2
-SVT_AV1_VERSION=0.8.7
+AOM_VERSION=3.3.0
+DAV1D_VERSION=1.0.0
+SVT_AV1_VERSION=0.9.1
 RAV1E_VERSION=0.5.1
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
 
@@ -142,13 +142,11 @@ function build_aom {
     if [ -n "$IS_MACOS" ] && [ "$PLAT" != "arm64" ]; then
         brew install aom
     else
-        (rm_mkdir aom-$AOM_VERSION \
-            && cd aom-$AOM_VERSION \
-            && fetch_unpack \
-                https://storage.googleapis.com/aom-releases/libaom-$AOM_VERSION.tar.gz)
+        fetch_unpack \
+            https://storage.googleapis.com/aom-releases/libaom-$AOM_VERSION.tar.gz
 
         if [ ! -n "$IS_MACOS" ] && [[ "$MB_ML_VER" == "1" ]]; then
-            (cd aom-$AOM_VERSION \
+            (cd libaom-$AOM_VERSION \
                 && patch -p1 -i $CONFIG_DIR/aom-2.0.2-manylinux1.patch)
         fi
         if [ ! -n "$IS_MACOS" ]; then
@@ -160,8 +158,8 @@ function build_aom {
                 -DCMAKE_SYSTEM_PROCESSOR=arm64 \
                 -DCMAKE_OSX_ARCHITECTURES=arm64)
         fi
-        mkdir aom-$AOM_VERSION/build/work
-        (cd aom-$AOM_VERSION/build/work \
+        mkdir libaom-$AOM_VERSION/build/work
+        (cd libaom-$AOM_VERSION/build/work \
             && cmake \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_INSTALL_PREFIX="${BUILD_PREFIX}" \
