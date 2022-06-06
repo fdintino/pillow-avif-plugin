@@ -73,6 +73,15 @@ def skip_unless_avif_encoder(codec_name):
     )
 
 
+def is_docker_qemu():
+    try:
+        init_proc_exe = os.readlink("/proc/1/exe")
+    except:
+        return False
+    else:
+        return "qemu" in init_proc_exe
+
+
 def skip_unless_avif_version_gte(version):
     if not _avif:
         reason = "AVIF unavailable"
@@ -719,6 +728,8 @@ class TestAvifLeaks(PillowLeakTestCase):
     mem_limit = MAX_THREADS * 3 * 1024
     iterations = 100
 
+    @pytest.mark.skipif(is_docker_qemu(),
+                        reason="Skipping on cross-architecture containers")
     def test_leak_load(self):
         with open(TEST_AVIF_FILE, "rb") as f:
             im_data = f.read()
