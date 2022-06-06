@@ -91,6 +91,21 @@ jobs:
             os: "ubuntu-20.04"
             os-name: "musllinux"
             manylinux-version: ""
+          - python: "3.8"
+            platform: "aarch64"
+            os: "ubuntu-20.04"
+            os-name: "manylinux2014"
+            manylinux-version: "2014"
+          - python: "3.9"
+            platform: "aarch64"
+            os: "ubuntu-20.04"
+            os-name: "manylinux2014"
+            manylinux-version: "2014"
+          - python: "3.10"
+            platform: "aarch64"
+            os: "ubuntu-20.04"
+            os-name: "manylinux2014"
+            manylinux-version: "2014"
     env:
       BUILD_COMMIT: HEAD
       PLAT: ${{ matrix.platform }}
@@ -115,11 +130,15 @@ jobs:
         with:
           repository: multi-build/multibuild
           path: multibuild
-          ref: 1d95c34a28b45c3877767318e5f4425dd1ede06d
+          ref: 34e970c4bc448b73af0127615fc4583b4f247369
 
       - uses: actions/setup-python@v2
         with:
           python-version: 3.9
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+        if: ${{ matrix.platform == 'aarch64' }}
 
       - name: Setup env_vars
         run: echo "export LIBAVIF_VERSION=${{ env.LIBAVIF_VERSION }}" > env_vars.sh
