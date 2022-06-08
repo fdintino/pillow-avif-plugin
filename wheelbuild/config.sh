@@ -10,12 +10,38 @@ AOM_VERSION=3.3.0
 DAV1D_VERSION=1.0.0
 SVT_AV1_VERSION=0.9.1
 RAV1E_VERSION=0.5.1
+SCCACHE_VERSION=0.3.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
 
 if [[ "$MB_ML_VER" == "1" ]]; then
     RAV1E_VERSION=0.4.1
     CARGO_C_VERSION=0.7.2
 fi
+
+function install_sccache {
+    echo "::group::Install sccache"
+    if [ -n "$IS_MACOS" ]; then
+        brew install sccache
+    elif [ ! -e /usr/local/bin/sccache ]; then
+        local base_url="https://github.com/mozilla/sccache/releases/download/v$SCCACHE_VERSION"
+        echo "base_url=$base_url"
+        archive_name="sccache-v${SCCACHE_VERSION}-${PLAT}-unknown-linux-musl"
+        echo "archive_name=$archive_name"
+        echo "url=${base_url}/${archive_name}.tar.gz"
+        echo "https://github.com/mozilla/sccache/releases/download/v0.3.0/sccache-v0.3.0-aarch64-unknown-linux-musl.tar.gz"
+        fetch_unpack "${base_url}/${archive_name}.tar.gz"
+        if [ -e "$archive_name/sccache" ]; then
+            cp "$archive_name/sccache" "/usr/local/bin/sccache"
+            chmod +x /usr/local/bin/sccache
+        fi
+    fi
+    if [ -e /usr/local/bin/sccache ]; then
+        export USE_SCCACHE=1
+        export RUSTC_WRAPPER=/usr/local/bin/sccache
+        export SCCACHE_DIR=$PWD/sccache
+    fi
+    echo "::endgroup::"
+}
 
 function install_meson {
     if [ -e meson-stamp ]; then return; fi
@@ -158,6 +184,11 @@ function build_aom {
                 -DCMAKE_SYSTEM_PROCESSOR=arm64 \
                 -DCMAKE_OSX_ARCHITECTURES=arm64)
         fi
+        if [ -n "$USE_SCCACHE" ]; then
+            cmake_flags+=(\
+                -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/sccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache)
+        fi
         mkdir libaom-$AOM_VERSION/build/work
         (cd libaom-$AOM_VERSION/build/work \
             && cmake \
@@ -189,6 +220,11 @@ function build_dav1d {
     local ldflags="$LDFLAGS"
     local meson_flags=()
 
+    local CC="${CC:-gcc}"
+    if [[ $(type -P sccache) ]]; then
+        CC="sccache $CC"
+    fi
+
     echo "::group::Build dav1d"
     fetch_unpack "https://code.videolan.org/videolan/dav1d/-/archive/$DAV1D_VERSION/dav1d-$DAV1D_VERSION.tar.gz"
 
@@ -216,13 +252,13 @@ EOF
     fi
 
     (cd dav1d-$DAV1D_VERSION \
-        && CFLAGS="$cflags" LDFLAGS="$ldflags" \
+        && CFLAGS="$cflags" LDFLAGS="$ldflags" CC="$CC" \
            meson . build \
               "--prefix=${BUILD_PREFIX}" \
               --default-library=static \
               --buildtype=release \
              "${meson_flags[@]}" \
-        && ninja -vC build install)
+        && SCCACHE_DIR="$SCCACHE_DIR" ninja -vC build install)
     echo "::endgroup::"
     touch dav1d-stamp
 }
@@ -239,7 +275,11 @@ function build_svt_av1 {
     if [ -n "$IS_ALPINE" ]; then
         extra_cmake_flags+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
     fi
-
+    if [ -n "$USE_SCCACHE" ]; then
+        extra_cmake_flags+=(\
+            -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache)
+    fi
     (cd SVT-AV1-v$SVT_AV1_VERSION/Build/linux \
         && cmake \
             ../.. \
@@ -338,6 +378,12 @@ function build_libavif {
                 -DCMAKE_OSX_ARCHITECTURES=arm64)
         fi
     fi
+    if [ -n "$USE_SCCACHE" ]; then
+        LIBAVIF_CMAKE_FLAGS+=(\
+            -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache)
+    fi
+
 
     echo "::group::Build libavif"
 
@@ -359,7 +405,11 @@ function build_libavif {
 
 function build_nasm {
     echo "::group::Build nasm"
-    build_simple nasm 2.15.05 https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/
+    local CC="${CC:-gcc}"
+    if [[ $(type -P sccache) ]]; then
+        CC="sccache $CC"
+    fi
+    SCCACHE_DIR="$SCCACHE_DIR" CC="$CC" build_simple nasm 2.15.05 https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/
     echo "::endgroup::"
 }
 
@@ -396,9 +446,13 @@ function build_openssl {
     fi
     fetch_unpack ${OPENSSL_DOWNLOAD_URL}/${OPENSSL_ROOT}.tar.gz
     check_sha256sum $ARCHIVE_SDIR/${OPENSSL_ROOT}.tar.gz ${OPENSSL_HASH}
+    local CC="${CC:-gcc}"
+    if [[ $(type -P sccache) ]]; then
+        CC="sccache $CC"
+    fi
     (cd ${OPENSSL_ROOT} \
-        && ./config no-ssl2 no-shared no-tests -fPIC --prefix=$BUILD_PREFIX \
-        && make -j4 \
+        && CC="$CC" ./config no-ssl2 no-shared no-tests -fPIC --prefix=$BUILD_PREFIX \
+        && SCCACHE_DIR="$SCCACHE_DIR" make -j4 \
         && make install_sw)
     touch openssl-stamp
     echo "::endgroup::"
@@ -450,6 +504,7 @@ function pre_build {
     ensure_sudo
     ensure_openssl
     install_zlib
+    install_sccache
 
     local libavif_build_dir="$REPO_DIR/depends/libavif-$LIBAVIF_VERSION/build"
 

@@ -151,8 +151,22 @@ jobs:
           key:
             ${{ env.LIBAVIF_VERSION }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*') }}-${{ matrix.os }}-${{ matrix.platform }}
 
+      - name: Cache sccache
+        uses: actions/cache@v2
+        with:
+          path: sccache
+          key:
+            sccache-${{ matrix.os }}-${{ matrix.os-name }}-${{ matrix.platform }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*', 'pillow-avif-plugin/**/*.py', 'pillow-avif-plugin/**/*.c') }}-${{ matrix.python }}
+          restore-keys: |
+            sccache-${{ matrix.os }}-${{ matrix.os-name }}-${{ matrix.platform }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*', 'pillow-avif-plugin/**/*.py', 'pillow-avif-plugin/**/*.c') }}-${{ matrix.python }}
+            sccache-${{ matrix.os }}-${{ matrix.os-name }}-${{ matrix.platform }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*', 'pillow-avif-plugin/**/*.py', 'pillow-avif-plugin/**/*.c') }}
+            sccache-${{ matrix.os }}-${{ matrix.os-name }}-${{ matrix.platform }}-
+
       - name: Build Wheel
         run: pillow-avif-plugin/wheelbuild/build.sh
+
+      - name: Fix Directory Permissions
+        run: sudo chown -R $(whoami):$(id -ng) sccache
 
       - uses: actions/upload-artifact@v2
         with:
