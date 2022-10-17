@@ -19,11 +19,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ "ubuntu-20.04", "macOS-10.15" ]
-        python: [ "pypy3.7-7.3.3", "pypy3.6-7.3", "2.7", "3.6", "3.7", "3.8", "3.9", "3.10" ]
+        python: [ "pypy3.7-7.3.3", "pypy3.6-7.3", "2.7", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11" ]
         platform: [ "x86_64", "i686" ]
         manylinux-version: [ "1", "2010" ]
         macos-target: [ "10.10" ]
         mb-ml-libc: [ "manylinux" ]
+        multibuild-sha: [ "34e970c4bc448b73af0127615fc4583b4f247369" ]
         exclude:
           - os: "macOS-10.15"
             platform: "i686"
@@ -39,6 +40,12 @@ jobs:
             manylinux-version: "2010"
           - python: "3.10"
             manylinux-version: "1"
+          - python: "3.11"
+            manylinux-version: "1"
+          - python: "3.11"
+            manylinux-version: "2010"
+          - python: "3.11"
+            multibuild-sha: "34e970c4bc448b73af0127615fc4583b4f247369"
         include:
           - os: "macOS-10.15"
             os-name: "osx"
@@ -106,6 +113,43 @@ jobs:
             os: "ubuntu-20.04"
             os-name: "manylinux2014"
             manylinux-version: "2014"
+          - python: "3.11"
+            platform: "x86_64"
+            os: "macOS-10.15"
+            os-name: "osx"
+            macos-target: "10.10"
+            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
+          - python: "3.11"
+            platform: "arm64"
+            os: "macos-11"
+            os-name: "osx"
+            macos-target: "11.0"
+            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
+          - python: "3.11"
+            platform: "x86_64"
+            mb-ml-libc: "musllinux"
+            os: "ubuntu-20.04"
+            os-name: "musllinux"
+            manylinux-version: ""
+            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
+          - python: "3.11"
+            platform: "aarch64"
+            os: "ubuntu-20.04"
+            os-name: "manylinux2014"
+            manylinux-version: "2014"
+            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
+          - python: "3.11"
+            platform: "x86_64"
+            os: "ubuntu-20.04"
+            os-name: "manylinux2014"
+            manylinux-version: "2014"
+            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
+          - python: "3.11"
+            platform: "i686"
+            os: "ubuntu-20.04"
+            os-name: "manylinux2014"
+            manylinux-version: "2014"
+            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
     env:
       BUILD_COMMIT: HEAD
       PLAT: ${{ matrix.platform }}
@@ -130,7 +174,7 @@ jobs:
         with:
           repository: multi-build/multibuild
           path: multibuild
-          ref: 34e970c4bc448b73af0127615fc4583b4f247369
+          ref: ${{ matrix.multibuild-sha }}
 
       - uses: actions/setup-python@v2
         with:
