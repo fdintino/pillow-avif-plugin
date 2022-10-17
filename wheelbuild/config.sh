@@ -106,6 +106,10 @@ function install_rust {
             curl -sLO https://static.rust-lang.org/rustup/archive/1.22.1/$PLAT-unknown-linux-gnu/rustup-init
             chmod u+x rustup-init
             ./rustup-init --default-toolchain nightly-2020-07-18 -y
+        elif [[ "$MB_ML_VER" == "2010" ]]; then
+            curl -sLO https://static.rust-lang.org/rustup/archive/1.25.1/$PLAT-unknown-linux-gnu/rustup-init
+            chmod u+x rustup-init
+            ./rustup-init --default-toolchain 1.63.0 -y
         else
             curl https://sh.rustup.rs -sSf | /bin/sh -s -- -y
         fi
