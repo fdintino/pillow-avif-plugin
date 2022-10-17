@@ -79,7 +79,7 @@ def cmd_cmake(params=None, file="."):
     )
 
 
-SF_MIRROR = "http://iweb.dl.sourceforge.net"
+SF_PROJECTS = "https://sourceforge.net/projects"
 
 architectures = {
     "x86": {"vcvars_arch": "x86", "msbuild_arch": "Win32"},
@@ -96,9 +96,9 @@ header = [
 # dependencies, listed in order of compilation
 deps = {
     "libjpeg": {
-        "url": SF_MIRROR + "/project/libjpeg-turbo/2.0.6/libjpeg-turbo-2.0.6.tar.gz",
-        "filename": "libjpeg-turbo-2.0.6.tar.gz",
-        "dir": "libjpeg-turbo-2.0.6",
+        "url": SF_PROJECTS + "/libjpeg-turbo/files/2.1.3/libjpeg-turbo-2.1.3.tar.gz/download",
+        "filename": "libjpeg-turbo-2.1.3.tar.gz",
+        "dir": "libjpeg-turbo-2.1.3",
         "build": [
             cmd_cmake(
                 [
@@ -132,7 +132,7 @@ deps = {
         "libs": [r"*.lib"],
     },
     "libpng": {
-        "url": SF_MIRROR + "/project/libpng/libpng16/1.6.37/lpng1637.zip",
+        "url": SF_PROJECTS + "/libpng/files/libpng16/1.6.37/lpng1637.zip/download",
         "filename": "lpng1637.zip",
         "dir": "lpng1637",
         "build": [
