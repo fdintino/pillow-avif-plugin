@@ -12,6 +12,8 @@ if [[ "$MB_PYTHON_VERSION" == pypy3* ]]; then
   else
     MB_PYTHON_OSX_VER="10.9"
   fi
+elif [[ "$MB_PYTHON_VERSION" == "3.11" ]] && [[ "$PLAT" == "i686" ]]; then
+  DOCKER_TEST_IMAGE="radarhere/bionic-$PLAT"
 fi
 
 if [[ "$MB_PYTHON_VERSION" == "2.7" ]]; then
@@ -24,6 +26,7 @@ fi
 echo "::group::Install a virtualenv"
   source multibuild/common_utils.sh
   source multibuild/travis_steps.sh
+  export LATEST_3p11="3.11.0rc2"
   # can't use default 7.3.1 on macOS due to https://foss.heptapod.net/pypy/pypy/-/issues/3229
   LATEST_PP_7p3=7.3.3
   python3 -m pip install virtualenv
