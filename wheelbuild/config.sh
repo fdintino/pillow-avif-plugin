@@ -418,7 +418,11 @@ function install_cmake {
     if [ -n "$IS_MACOS" ]; then
         brew install cmake
     else
-        $PYTHON_EXE -m pip install cmake
+        if [[ "$MB_ML_VER" == "1" ]]; then
+            $PYTHON_EXE -m pip install 'cmake<3.23'
+        else
+            $PYTHON_EXE -m pip install cmake
+        fi
     fi
     echo "::endgroup::"
 }
