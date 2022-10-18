@@ -35,7 +35,7 @@ jobs:
     name: ${{ matrix.os }} Python ${{ matrix.python-version }}
 
     env:
-      LIBAVIF_VERSION: 0.10.1
+      LIBAVIF_VERSION: 0.11.0
 
     steps:
     - uses: actions/checkout@v2
