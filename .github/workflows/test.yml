@@ -10,7 +10,7 @@ jobs:
       matrix:
         os: [
           "ubuntu-20.04",
-          "macOS-10.15",
+          "macos-11",
         ]
         python-version: [
           "pypy-3.7",
@@ -28,7 +28,7 @@ jobs:
         # Include new variables for Codecov
         - os: ubuntu-20.04
           codecov-flag: GHA_Ubuntu
-        - os: macOS-10.15
+        - os: macos-11
           codecov-flag: GHA_macOS
 
     runs-on: ${{ matrix.os }}
