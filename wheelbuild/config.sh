@@ -193,6 +193,11 @@ function build_aom {
                 -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/sccache \
                 -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache)
         fi
+        if [ -n "$IS_ALPINE" ]; then
+            (cd libaom-$AOM_VERSION \
+                && patch -p1 -i $CONFIG_DIR/aom-fix-stack-size.patch)
+            extra_cmake_flags+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
+        fi
         mkdir libaom-$AOM_VERSION/build/work
         (cd libaom-$AOM_VERSION/build/work \
             && cmake \
