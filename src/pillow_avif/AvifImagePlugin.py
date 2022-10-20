@@ -130,13 +130,13 @@ def _save(im, fp, filename, save_all=False):
     if qmin is None and qmax is None:
         # The min and max quantizer settings in libavif range from 0 (best quality)
         # to 63 (worst quality). If neither are explicitly specified, we use a 0-100
-        # quality scale (default 90) and calculate the qmin and qmax from that.
+        # quality scale (default 75) and calculate the qmin and qmax from that.
         #
         # - qmin is 0 for quality >= 64. Below that, qmin has an inverse linear
         #   relation to quality (i.e., quality 63 = qmin 1, quality 0 => qmin 63)
         # - qmax is 0 for quality=100, then qmax increases linearly relative to
         #   quality decreasing, until it flattens out at quality=37.
-        quality = info.get("quality", 90)
+        quality = info.get("quality", 75)
         if not isinstance(quality, int):
             raise ValueError("Invalid quality setting")
         qmin = max(0, min(64 - quality, 63))
