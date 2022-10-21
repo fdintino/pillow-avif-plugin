@@ -368,7 +368,7 @@ def build_dep_all():
             continue
         script = build_dep(dep_name)
         lines.append(
-            r'cmd.exe /c "{{build_dir}}\{script}"'.format(
+            r'cmd.exe /c "{{build_dir}}\{script}"'.format(  # noqa: F522
                 build_dir=build_dir,
                 script=script,
             )

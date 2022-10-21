@@ -76,7 +76,7 @@ def skip_unless_avif_encoder(codec_name):
 def is_docker_qemu():
     try:
         init_proc_exe = os.readlink("/proc/1/exe")
-    except:
+    except:  # noqa: E722
         return False
     else:
         return "qemu" in init_proc_exe
