@@ -17,8 +17,8 @@ jobs:
 
     - name: Set environment variables
       run: |
-        echo "REPORTER=${{ github.event_name == 'pull_request' && 'github-pr-check' || 'github-check' }}" >> $GITHUB_ENV
-        echo "REVIEWDOG_GITHUB_API_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+        echo "REPORTER=${{ github.event_name == 'pull_request' && 'github-pr-review' || 'github-check' }}" >> $GITHUB_ENV
+        echo "REVIEWDOG_GITHUB_API_TOKEN=${{ secrets.REVIEWDOG_TOKEN }}" >> $GITHUB_ENV
 
     - name: clang-format
       uses: DoozyX/clang-format-lint-action@v0.14
@@ -41,12 +41,12 @@ jobs:
       # if: matrix.tool == 'flake8'
       uses: reviewdog/action-flake8@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        github_token: ${{ secrets.REVIEWDOG_TOKEN }}
         reporter: ${{ env.REPORTER }}
 
     - name: black
       # if: matrix.tool == 'black'
       uses: reviewdog/action-black@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        github_token: ${{ secrets.REVIEWDOG_TOKEN }}
         reporter: ${{ env.REPORTER }}
