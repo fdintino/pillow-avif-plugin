@@ -96,7 +96,8 @@ header = [
 # dependencies, listed in order of compilation
 deps = {
     "libjpeg": {
-        "url": SF_PROJECTS + "/libjpeg-turbo/files/2.1.3/libjpeg-turbo-2.1.3.tar.gz/download",
+        "url": SF_PROJECTS
+        + "/libjpeg-turbo/files/2.1.3/libjpeg-turbo-2.1.3.tar.gz/download",
         "filename": "libjpeg-turbo-2.1.3.tar.gz",
         "dir": "libjpeg-turbo-2.1.3",
         "build": [
@@ -192,7 +193,7 @@ deps = {
             ),
             cmd_mkdir(r"{inc_dir}\avif"),
             cmd_copy(r"include\avif\avif.h", r"{inc_dir}\avif"),
-            "@echo ::endgroup::"
+            "@echo ::endgroup::",
         ],
         "libs": [r"*.lib"],
     },
@@ -258,9 +259,9 @@ def find_msvs():
     if not os.path.isfile(vcvarsall):
         print("Visual Studio vcvarsall not found")
         return None
-    vs["header"].append('call "{vcvarsall}" {{vcvars_arch}}'.format(
-        vcvarsall=vcvarsall
-    ))
+    vs["header"].append(
+        'call "{vcvarsall}" {{vcvars_arch}}'.format(vcvarsall=vcvarsall)
+    )
 
     return vs
 
@@ -366,10 +367,12 @@ def build_dep_all():
         if dep_name in disabled:
             continue
         script = build_dep(dep_name)
-        lines.append(r'cmd.exe /c "{{build_dir}}\{script}"'.format(
-            build_dir=build_dir,
-            script=script,
-        ))
+        lines.append(
+            r'cmd.exe /c "{{build_dir}}\{script}"'.format(
+                build_dir=build_dir,
+                script=script,
+            )
+        )
         lines.append("if errorlevel 1 echo Build failed! && exit /B 1")
     lines.append("@echo All pillow-avif-plugin dependencies built successfully!")
     write_script("build_dep_all.cmd", lines)
@@ -400,15 +403,19 @@ def install_meson():
 
 
 def build_pillow_avif_plugin():
-    lines = [
-        "@echo ---- Building pillow-avif-plugin (build_ext %*) ----",
-        cmd_cd("{pillow_avif_plugin_dir}"),
-    ] + prefs["header"] + [
-        cmd_set("DISTUTILS_USE_SDK", "1"),  # use same compiler to build pillow-avif
-        cmd_set("MSSdk", "1"),  # for PyPy3.6
-        cmd_set("py_vcruntime_redist", "true"),  # use /MD, not /MT
-        r'"{python_dir}\{python_exe}" setup.py build_ext %*',
-    ]
+    lines = (
+        [
+            "@echo ---- Building pillow-avif-plugin (build_ext %*) ----",
+            cmd_cd("{pillow_avif_plugin_dir}"),
+        ]
+        + prefs["header"]
+        + [
+            cmd_set("DISTUTILS_USE_SDK", "1"),  # use same compiler to build pillow-avif
+            cmd_set("MSSdk", "1"),  # for PyPy3.6
+            cmd_set("py_vcruntime_redist", "true"),  # use /MD, not /MT
+            r'"{python_dir}\{python_exe}" setup.py build_ext %*',
+        ]
+    )
 
     write_script("build_pillow_avif_plugin.cmd", lines)
 

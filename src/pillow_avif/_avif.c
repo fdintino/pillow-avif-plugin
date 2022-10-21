@@ -202,8 +202,8 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
     avifEncoder *encoder = NULL;
 
     char *subsampling = "4:2:0";
-    int qmin = AVIF_QUANTIZER_BEST_QUALITY;    // =0
-    int qmax = 10;                             // "High Quality", but not lossless
+    int qmin = AVIF_QUANTIZER_BEST_QUALITY;  // =0
+    int qmax = 10;                           // "High Quality", but not lossless
     int speed = 8;
     PyObject *icc_bytes;
     PyObject *exif_bytes;
@@ -846,19 +846,23 @@ AvifCodecVersions() {
 /* -------------------------------------------------------------------- */
 
 #if PY_VERSION_HEX >= 0x03000000
-  #define MOD_ERROR_VAL NULL
-  #define MOD_SUCCESS_VAL(val) val
-  #define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
-  #define MOD_DEF(ob, name, methods) \
-          static struct PyModuleDef moduledef = { \
-            PyModuleDef_HEAD_INIT, name, NULL, -1, methods, }; \
-          ob = PyModule_Create(&moduledef);
+#define MOD_ERROR_VAL NULL
+#define MOD_SUCCESS_VAL(val) val
+#define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
+#define MOD_DEF(ob, name, methods)          \
+    static struct PyModuleDef moduledef = { \
+        PyModuleDef_HEAD_INIT,              \
+        name,                               \
+        NULL,                               \
+        -1,                                 \
+        methods,                            \
+    };                                      \
+    ob = PyModule_Create(&moduledef);
 #else
-  #define MOD_ERROR_VAL
-  #define MOD_SUCCESS_VAL(val)
-  #define MOD_INIT(name) void init##name(void)
-  #define MOD_DEF(ob, name, methods) \
-          ob = Py_InitModule(name, methods);
+#define MOD_ERROR_VAL
+#define MOD_SUCCESS_VAL(val)
+#define MOD_INIT(name) void init##name(void)
+#define MOD_DEF(ob, name, methods) ob = Py_InitModule(name, methods);
 #endif
 
 static PyMethodDef avifMethods[] = {
@@ -881,10 +885,7 @@ setup_module(PyObject *m) {
     Py_DECREF(v);
 
     v = Py_BuildValue(
-        "(iii)",
-        AVIF_VERSION_MAJOR,
-        AVIF_VERSION_MINOR,
-        AVIF_VERSION_PATCH);
+        "(iii)", AVIF_VERSION_MAJOR, AVIF_VERSION_MINOR, AVIF_VERSION_PATCH);
 
     if (PyDict_SetItemString(d, "VERSION", v) < 0) {
         Py_DECREF(v);
