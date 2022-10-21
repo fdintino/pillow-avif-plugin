@@ -148,7 +148,7 @@ def _save(im, fp, filename, save_all=False):
     codec = info.get("codec", "auto")
     range_ = info.get("range", "full")
     tile_rows_log2 = info.get("tile_rows", 0)
-    tile_cols_log2 = info.get("tile_rows", 0)
+    tile_cols_log2 = info.get("tile_cols", 0)
     alpha_premultiplied = bool(info.get("alpha_premultiplied", False))
     autotiling = bool(info.get("autotiling", tile_rows_log2 == tile_cols_log2 == 0))
 
