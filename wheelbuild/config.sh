@@ -10,6 +10,8 @@ AOM_VERSION=3.5.0
 DAV1D_VERSION=1.0.0
 SVT_AV1_VERSION=0.9.1
 RAV1E_VERSION=0.5.1
+LIBWEBP_SHA=15a91ab179b0b605727d16fb751c12674da9dfec
+LIBYUV_SHA=f9fda6e7
 SCCACHE_VERSION=0.3.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
 
@@ -352,6 +354,44 @@ EOF
     echo "::endgroup::"
 }
 
+function build_libsharpyuv {
+    if [ -e libsharpyuv-stamp ]; then return; fi
+     echo "::group::Build libsharpyuv"
+    fetch_unpack https://github.com/webmproject/libwebp/archive/$LIBWEBP_SHA.tar.gz libwebp-$LIBWEBP_SHA.tar.gz
+
+    mkdir -p libwebp-$LIBWEBP_SHA/build
+
+    (cd libwebp-$LIBWEBP_SHA/build \
+        && cmake .. -G Ninja \
+            -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+        && ninja sharpyuv)
+    echo "::endgroup::"
+    touch libsharpyuv-stamp
+}
+
+function build_libyuv {
+    if [ -e libyuv-stamp ]; then return; fi
+    echo "::group::Build libyuv"
+    mkdir -p libyuv-$LIBYUV_SHA
+    (cd libyuv-$LIBYUV_SHA && \
+        fetch_unpack "https://chromium.googlesource.com/libyuv/libyuv/+archive/$LIBYUV_SHA.tar.gz")
+    mkdir -p libyuv-$LIBYUV_SHA/build
+    local cmake_flags=()
+    if [ ! -n "$IS_MACOS" ]; then
+        cmake_flags+=("-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
+    fi
+    (cd libyuv-$LIBYUV_SHA/build \
+        && cmake -G Ninja .. \
+            -DBUILD_SHARED_LIBS=0 \
+            -DCMAKE_BUILD_TYPE=Release \
+            "${cmake_flags[@]}" .. \
+        && ninja yuv)
+    echo "::endgroup::"
+    touch libyuv-stamp
+}
+
 function build_libavif {
     LIBAVIF_CMAKE_FLAGS=()
 
@@ -386,6 +426,8 @@ function build_libavif {
                 -DCMAKE_SYSTEM_PROCESSOR=arm64 \
                 -DCMAKE_OSX_ARCHITECTURES=arm64)
         fi
+    else
+        LIBAVIF_CMAKE_FLAGS+=("-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
     fi
     if [ -n "$USE_SCCACHE" ]; then
         LIBAVIF_CMAKE_FLAGS+=(\
@@ -394,11 +436,19 @@ function build_libavif {
     fi
 
 
-    echo "::group::Build libavif"
-
     fetch_unpack \
         "https://github.com/AOMediaCodec/libavif/archive/v$LIBAVIF_VERSION.tar.gz" \
         "libavif-$LIBAVIF_VERSION.tar.gz"
+
+    build_libsharpyuv
+    mv libwebp-$LIBWEBP_SHA libavif-$LIBAVIF_VERSION/ext/libwebp
+    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LOCAL_LIBSHARPYUV=ON)
+
+    build_libyuv
+    mv libyuv-$LIBYUV_SHA libavif-$LIBAVIF_VERSION/ext/libyuv
+    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LOCAL_LIBYUV=ON)
+
+    echo "::group::Build libavif"
 
     mkdir -p libavif-$LIBAVIF_VERSION/build
 
