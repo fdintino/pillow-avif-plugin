@@ -150,6 +150,7 @@ def _save(im, fp, filename, save_all=False):
     tile_rows_log2 = info.get("tile_rows", 0)
     tile_cols_log2 = info.get("tile_rows", 0)
     alpha_premultiplied = bool(info.get("alpha_premultiplied", False))
+    autotiling = bool(info.get("autotiling", tile_rows_log2 == tile_cols_log2 == 0))
 
     icc_profile = info.get("icc_profile", im.info.get("icc_profile"))
     exif = info.get("exif", im.info.get("exif"))
@@ -192,6 +193,7 @@ def _save(im, fp, filename, save_all=False):
         tile_rows_log2,
         tile_cols_log2,
         alpha_premultiplied,
+        autotiling,
         icc_profile or b"",
         exif or b"",
         xmp or b"",
