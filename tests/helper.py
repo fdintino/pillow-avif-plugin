@@ -31,7 +31,6 @@ if os.environ.get("SHOW_ERRORS", None):
             a.show()
             b.show()
 
-
 elif "GITHUB_ACTIONS" in os.environ:
     HAS_UPLOADER = True
 
@@ -44,7 +43,6 @@ elif "GITHUB_ACTIONS" in os.environ:
             a.save(os.path.join(tmpdir, "a.png"))
             b.save(os.path.join(tmpdir, "b.png"))
             return tmpdir
-
 
 else:
     try:
@@ -73,9 +71,7 @@ def assert_image(im, mode, size, msg=None):
         assert im.mode == mode, msg or "got mode %r, expected %r" % (im.mode, mode)
 
     if size is not None:
-        assert im.size == size, (
-            msg or "got size %r, expected %r" % (im.size, size)
-        )
+        assert im.size == size, msg or "got size %r, expected %r" % (im.size, size)
 
 
 def assert_image_similar(a, b, epsilon, msg=None):
@@ -92,9 +88,10 @@ def assert_image_similar(a, b, epsilon, msg=None):
     ave_diff = diff / (a.size[0] * a.size[1])
     try:
         assert epsilon >= ave_diff, (
-            (msg or "")
-            + " average pixel value difference %.04f > epsilon %.04f" % (
-                ave_diff, epsilon)
+            msg or ""
+        ) + " average pixel value difference %.04f > epsilon %.04f" % (
+            ave_diff,
+            epsilon,
         )
     except Exception as e:
         if HAS_UPLOADER:
@@ -177,7 +174,7 @@ def is_ascii(s):
     for char in s:
         if isinstance(char, str):
             char = ord(char)
-        if char < 0x20 or char > 0x7e:
+        if char < 0x20 or char > 0x7E:
             return False
     return True
 
@@ -191,7 +188,7 @@ def has_alpha_premultiplied(im_bytes):
         if not is_ascii(boxtype):
             return False
         if size == 1:  # 64bit size
-            size, = unpack(">Q", stream.read(8))
+            (size,) = unpack(">Q", stream.read(8))
         end = start + size
         version, _ = unpack(">B3s", stream.read(4))
         if boxtype in (b"ftyp", b"hdlr", b"pitm", b"iloc", b"iinf"):
