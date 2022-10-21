@@ -367,12 +367,7 @@ def build_dep_all():
         if dep_name in disabled:
             continue
         script = build_dep(dep_name)
-        lines.append(
-            r'cmd.exe /c "{{build_dir}}\{script}"'.format(
-                build_dir=build_dir,
-                script=script,
-            )
-        )
+        lines.append(rf'cmd.exe /c "{{build_dir}}\{script}"')
         lines.append("if errorlevel 1 echo Build failed! && exit /B 1")
     lines.append("@echo All pillow-avif-plugin dependencies built successfully!")
     write_script("build_dep_all.cmd", lines)
