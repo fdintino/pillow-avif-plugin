@@ -19,6 +19,7 @@ typedef struct {
     avifBool alpha_premultiplied;
     int tile_rows_log2;
     int tile_cols_log2;
+    avifBool autotiling;
 } avifEncOptions;
 
 // Encoder type
@@ -209,6 +210,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
     PyObject *exif_bytes;
     PyObject *xmp_bytes;
     PyObject *alpha_premultiplied = NULL;
+    PyObject *autotiling = NULL;
     int tile_rows_log2 = 0;
     int tile_cols_log2 = 0;
 
@@ -219,7 +221,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "IIsiiissiiOSSSO",
+            "IIsiiissiiOOSSSO",
             &width,
             &height,
             &subsampling,
@@ -231,6 +233,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
             &tile_rows_log2,
             &tile_cols_log2,
             &alpha_premultiplied,
+            &autotiling,
             &icc_bytes,
             &exif_bytes,
             &xmp_bytes,
@@ -302,6 +305,8 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
         enc_options.alpha_premultiplied = AVIF_FALSE;
     }
 
+    enc_options.autotiling = (autotiling == Py_True) ? AVIF_TRUE : AVIF_FALSE;
+
     // Create a new animation encoder and picture frame
     self = PyObject_New(AvifEncoderObject, &AvifEncoder_Type);
     if (self) {
@@ -323,6 +328,10 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
         encoder->timescale = (uint64_t)1000;
         encoder->tileRowsLog2 = enc_options.tile_rows_log2;
         encoder->tileColsLog2 = enc_options.tile_cols_log2;
+
+#if AVIF_VERSION >= 110000
+        encoder->autoTiling = enc_options.autotiling;
+#endif
 
 #if AVIF_VERSION >= 80200
         _add_codec_specific_options(encoder, advanced);
