@@ -5,10 +5,6 @@ on: [push, pull_request]
 jobs:
   lint:
     runs-on: ubuntu-latest
-    # strategy:
-    #   fail-fast: false
-    #   matrix:
-    #     tool: ["flake8", "black", "clang-format"]
 
     steps:
     - uses: actions/checkout@v2
@@ -18,35 +14,33 @@ jobs:
     - name: Set environment variables
       run: |
         echo "REPORTER=${{ github.event_name == 'pull_request' && 'github-pr-review' || 'github-check' }}" >> $GITHUB_ENV
-        echo "REVIEWDOG_GITHUB_API_TOKEN=${{ secrets.REVIEWDOG_TOKEN }}" >> $GITHUB_ENV
+        echo "REVIEWDOG_GITHUB_API_TOKEN=${{ secrets.REVIEWDOG_GITHUB_API_TOKEN }}" >> $GITHUB_ENV
+        echo "REVIEWDOG_TOKEN=${{ secrets.REVIEWDOG_TOKEN }}" >> $GITHUB_ENV
 
     - name: clang-format
       uses: DoozyX/clang-format-lint-action@v0.14
-      # if: matrix.tool == 'clang-format'
       with:
         source: 'src'
         clangFormatVersion: 14
         inplace: True
 
     - name: Report clang-format
-      # if: matrix.tool == 'clang-format'
       run: |
-        git diff > clang-format.patch
-        git stash && git stash drop
         wget http://misc.nalajcie.org/reviewdog -O /tmp/reviewdog 2>/dev/null
         chmod +x /tmp/reviewdog
-        /tmp/reviewdog -f diff -name="clang-format" -f.diff.strip=1 -reporter=${{ env.REPORTER }} < clang-format.patch
+        /tmp/reviewdog -filter-mode=nofilter -f diff -name="clang-format" -f.diff.strip=1 -reporter=${{ env.REPORTER }}
 
     - name: flake8
-      # if: matrix.tool == 'flake8'
       uses: reviewdog/action-flake8@v3
       with:
-        github_token: ${{ secrets.REVIEWDOG_TOKEN }}
+        github_token: ${{ secrets.REVIEWDOG_GITHUB_API_TOKEN }}
         reporter: ${{ env.REPORTER }}
+        filter_mode: nofilter
 
     - name: black
-      # if: matrix.tool == 'black'
       uses: reviewdog/action-black@v3
       with:
-        github_token: ${{ secrets.REVIEWDOG_TOKEN }}
+        github_token: ${{ secrets.REVIEWDOG_GITHUB_API_TOKEN }}
         reporter: ${{ env.REPORTER }}
+        filter_mode: nofilter
+
