@@ -102,7 +102,9 @@ class TestUnsupportedAvif:
             if UnidentifiedImageError:
                 pytest.warns(
                     UserWarning,
-                    lambda: pytest.raises(UnidentifiedImageError, Image.open, file_path)
+                    lambda: pytest.raises(
+                        UnidentifiedImageError, Image.open, file_path
+                    ),
                 )
             else:
                 with pytest.raises(IOError):
@@ -185,7 +187,7 @@ class TestFileAvif:
 
     @pytest.mark.parametrize("major_brand", [b"avif", b"avis", b"mif1", b"msf1"])
     def test_accept_ftyp_brands(self, major_brand):
-        data = b'\x00\x00\x00\x1cftyp%s\x00\x00\x00\x00' % major_brand
+        data = b"\x00\x00\x00\x1cftyp%s\x00\x00\x00\x00" % major_brand
         assert AvifImagePlugin._accept(data) is True
 
     def test_no_resource_warning(self, tmp_path):
@@ -429,10 +431,15 @@ class TestFileAvif:
             ctrl_buf = BytesIO()
             im.save(ctrl_buf, "AVIF", codec="aom")
             test_buf = BytesIO()
-            im.save(test_buf, "AVIF", codec="aom", advanced={
-                "aq-mode": "1",
-                "enable-chroma-deltaq": "1",
-            })
+            im.save(
+                test_buf,
+                "AVIF",
+                codec="aom",
+                advanced={
+                    "aq-mode": "1",
+                    "enable-chroma-deltaq": "1",
+                },
+            )
             assert ctrl_buf.getvalue() != test_buf.getvalue()
 
     @skip_unless_avif_encoder("aom")
@@ -728,8 +735,9 @@ class TestAvifLeaks(PillowLeakTestCase):
     mem_limit = MAX_THREADS * 3 * 1024
     iterations = 100
 
-    @pytest.mark.skipif(is_docker_qemu(),
-                        reason="Skipping on cross-architecture containers")
+    @pytest.mark.skipif(
+        is_docker_qemu(), reason="Skipping on cross-architecture containers"
+    )
     def test_leak_load(self):
         with open(TEST_AVIF_FILE, "rb") as f:
             im_data = f.read()
