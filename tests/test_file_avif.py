@@ -648,6 +648,20 @@ class TestAvifAnimation:
         with pytest.raises(ValueError):
             frame1.save(temp_file, save_all=True, append_images=[frame2], duration=100)
 
+    @skip_unless_avif_encoder("aom")
+    def test_save_aom_speed_realtime(self, tmp_path):
+        temp_file = str(tmp_path / "temp.avif")
+        frame1 = Image.new("RGBA", (150, 150))
+        frame2 = Image.new("RGBA", (150, 150))
+        frame1.save(
+            temp_file,
+            save_all=True,
+            append_images=[frame2],
+            duration=100,
+            codec="aom",
+            speed=8,
+        )
+
     @skip_unless_avif_version_gte((0, 9, 0))
     @pytest.mark.parametrize("alpha_premultipled", [False, True])
     def test_alpha_premultiplied_true(self, alpha_premultipled):
