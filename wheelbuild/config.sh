@@ -12,6 +12,7 @@ SVT_AV1_VERSION=1.3.0
 RAV1E_VERSION=0.5.1
 LIBWEBP_SHA=15a91ab179b0b605727d16fb751c12674da9dfec
 LIBYUV_SHA=f9fda6e7
+CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
 
@@ -20,17 +21,48 @@ if [[ "$MB_ML_VER" == "1" ]]; then
     CARGO_C_VERSION=0.7.2
 fi
 
+function install_ccache {
+    mkdir -p $PWD/ccache
+    if [ -e /parent-home ]; then
+        ln -s $PWD/ccache /parent-home/.ccache
+    fi
+    ln -s $PWD/ccache $HOME/.ccache
+
+    if [ -n "$IS_MACOS" ]; then
+        brew install ccache
+        export CCACHE_CPP2=1
+    elif [[ "$PLAT" == "x86_64" ]] && [[ $MB_ML_VER == "2014" ]]; then
+        local base_url="https://github.com/ccache/ccache/releases/download/v$CCACHE_VERSION"
+        local archive_name="ccache-${CCACHE_VERSION}-linux-x86_64"
+        fetch_unpack "${base_url}/${archive_name}.tar.xz"
+        if [ -e "$archive_name/ccache" ]; then
+            cp "$archive_name/ccache" "/usr/local/bin/ccache"
+            chmod +x /usr/local/bin/ccache
+        fi
+    elif [ -n "$IS_ALPINE" ]; then
+        suppress apk add ccache
+    else
+        if [[ $MB_ML_VER == "_2_24" ]]; then
+            # debian:9 based distro
+            suppress apt-get install -y ccache
+        elif [[ $MB_ML_VER == "2014" ]] && [[ "$PLAT" == "i686" ]]; then
+            # There is no ccache rpm for el7.i686, but the one from EPEL 6 works fine
+            yum install -y https://archives.fedoraproject.org/pub/archive/epel/6/i386/Packages/c/ccache-3.1.6-2.el6.i686.rpm
+        else
+            # centos based distro
+            suppress yum_install epel-release
+            suppress yum_install ccache
+        fi
+    fi
+}
+
 function install_sccache {
     echo "::group::Install sccache"
     if [ -n "$IS_MACOS" ]; then
         brew install sccache
     elif [ ! -e /usr/local/bin/sccache ]; then
         local base_url="https://github.com/mozilla/sccache/releases/download/v$SCCACHE_VERSION"
-        echo "base_url=$base_url"
-        archive_name="sccache-v${SCCACHE_VERSION}-${PLAT}-unknown-linux-musl"
-        echo "archive_name=$archive_name"
-        echo "url=${base_url}/${archive_name}.tar.gz"
-        echo "https://github.com/mozilla/sccache/releases/download/v0.3.0/sccache-v0.3.0-aarch64-unknown-linux-musl.tar.gz"
+        local archive_name="sccache-v${SCCACHE_VERSION}-${PLAT}-unknown-linux-musl"
         fetch_unpack "${base_url}/${archive_name}.tar.gz"
         if [ -e "$archive_name/sccache" ]; then
             cp "$archive_name/sccache" "/usr/local/bin/sccache"
@@ -190,10 +222,10 @@ function build_aom {
                 -DCMAKE_SYSTEM_PROCESSOR=arm64 \
                 -DCMAKE_OSX_ARCHITECTURES=arm64)
         fi
-        if [ -n "$USE_SCCACHE" ]; then
+        if [[ $(type -P ccache) ]]; then
             cmake_flags+=(\
-                -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/sccache \
-                -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache)
+                -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
         fi
         if [ -n "$IS_ALPINE" ]; then
             (cd libaom-$AOM_VERSION \
@@ -231,9 +263,11 @@ function build_dav1d {
     local ldflags="$LDFLAGS"
     local meson_flags=()
 
-    local CC="${CC:-gcc}"
-    if [[ $(type -P sccache) ]]; then
-        CC="sccache $CC"
+    local CC=$(type -P "${CC:-gcc}")
+    local CXX=$(type -P "${CXX:-g++}")
+    if [[ $(type -P ccache) ]]; then
+        CC="$(type -P ccache) $CC"
+        CXX="$(type -P ccache) $CXX"
     fi
 
     echo "::group::Build dav1d"
@@ -263,7 +297,7 @@ EOF
     fi
 
     (cd dav1d-$DAV1D_VERSION \
-        && CFLAGS="$cflags" LDFLAGS="$ldflags" CC="$CC" \
+        && CFLAGS="$cflags" LDFLAGS="$ldflags" CC="$CC" CXX="$CXX" \
            meson . build \
               "--prefix=${BUILD_PREFIX}" \
               --default-library=static \
@@ -286,10 +320,10 @@ function build_svt_av1 {
     if [ -n "$IS_ALPINE" ]; then
         extra_cmake_flags+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
     fi
-    if [ -n "$USE_SCCACHE" ]; then
+    if [[ $(type -P ccache) ]]; then
         extra_cmake_flags+=(\
-            -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/sccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache)
+            -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
     fi
     (cd SVT-AV1-v$SVT_AV1_VERSION/Build/linux \
         && cmake \
@@ -361,11 +395,19 @@ function build_libsharpyuv {
 
     mkdir -p libwebp-$LIBWEBP_SHA/build
 
+    local cmake_flags=()
+    if [[ $(type -P ccache) ]]; then
+        cmake_flags+=(\
+            -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
+    fi
+
     (cd libwebp-$LIBWEBP_SHA/build \
         && cmake .. -G Ninja \
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF \
+             "${cmake_flags[@]}" \
         && ninja sharpyuv)
     echo "::endgroup::"
     touch libsharpyuv-stamp
@@ -381,6 +423,11 @@ function build_libyuv {
     local cmake_flags=()
     if [ ! -n "$IS_MACOS" ]; then
         cmake_flags+=("-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
+    fi
+    if [[ $(type -P ccache) ]]; then
+        cmake_flags+=(\
+            -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
     fi
     (cd libyuv-$LIBYUV_SHA/build \
         && cmake -G Ninja .. \
@@ -429,12 +476,11 @@ function build_libavif {
     else
         LIBAVIF_CMAKE_FLAGS+=("-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
     fi
-    if [ -n "$USE_SCCACHE" ]; then
+    if [[ $(type -P ccache) ]]; then
         LIBAVIF_CMAKE_FLAGS+=(\
-            -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/sccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache)
+            -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
     fi
-
 
     fetch_unpack \
         "https://github.com/AOMediaCodec/libavif/archive/v$LIBAVIF_VERSION.tar.gz" \
@@ -464,11 +510,13 @@ function build_libavif {
 
 function build_nasm {
     echo "::group::Build nasm"
-    local CC="${CC:-gcc}"
-    if [[ $(type -P sccache) ]]; then
-        CC="sccache $CC"
+    local CC=$(type -P "${CC:-gcc}")
+    local CXX=$(type -P "${CXX:-g++}")
+    if [[ $(type -P ccache) ]]; then
+        CC="$(type -P ccache) $CC"
+        CXX="$(type -P ccache) $CXX"
     fi
-    SCCACHE_DIR="$SCCACHE_DIR" CC="$CC" build_simple nasm 2.15.05 https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/
+    SCCACHE_DIR="$SCCACHE_DIR" CC="$CC" CXX="$CXX" build_simple nasm 2.15.05 https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/
     echo "::endgroup::"
 }
 
@@ -509,12 +557,14 @@ function build_openssl {
     fi
     fetch_unpack ${OPENSSL_DOWNLOAD_URL}/${OPENSSL_ROOT}.tar.gz
     check_sha256sum $ARCHIVE_SDIR/${OPENSSL_ROOT}.tar.gz ${OPENSSL_HASH}
-    local CC="${CC:-gcc}"
-    if [[ $(type -P sccache) ]]; then
-        CC="sccache $CC"
+    local CC=$(type -P "${CC:-gcc}")
+    local CXX=$(type -P "${CXX:-g++}")
+    if [[ $(type -P ccache) ]]; then
+        CC="$(type -P ccache) $CC"
+        CXX="$(type -P ccache) $CXX"
     fi
     (cd ${OPENSSL_ROOT} \
-        && CC="$CC" ./config no-ssl2 no-shared no-tests -fPIC --prefix=$BUILD_PREFIX \
+        && CC="$CC" CXX="$CXX" ./config no-ssl2 no-shared no-tests -fPIC --prefix=$BUILD_PREFIX \
         && SCCACHE_DIR="$SCCACHE_DIR" make -j4 \
         && make install_sw)
     touch openssl-stamp
@@ -568,6 +618,7 @@ function pre_build {
     ensure_openssl
     install_zlib
     install_sccache
+    install_ccache
 
     local libavif_build_dir="$REPO_DIR/depends/libavif-$LIBAVIF_VERSION/build"
 
