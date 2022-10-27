@@ -496,6 +496,9 @@ function build_libavif {
 
     echo "::group::Build libavif"
 
+    (cd libavif-$LIBAVIF_VERSION \
+        && patch -p1 -i $CONFIG_DIR/libavif-disable-aom_usage_realtime.patch)
+
     mkdir -p libavif-$LIBAVIF_VERSION/build
 
     (cd libavif-$LIBAVIF_VERSION/build \
