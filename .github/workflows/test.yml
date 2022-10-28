@@ -41,13 +41,13 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache build
       id: build-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: depends/libavif-${{ env.LIBAVIF_VERSION }}
         key:
@@ -78,7 +78,7 @@ jobs:
       shell: pwsh
 
     - name: Upload errors
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: errors

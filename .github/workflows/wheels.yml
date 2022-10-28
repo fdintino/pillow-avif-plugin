@@ -176,7 +176,7 @@ jobs:
           path: multibuild
           ref: ${{ matrix.multibuild-sha }}
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.9
 
@@ -189,14 +189,14 @@ jobs:
 
       - name: Cache build
         id: build-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: pillow-avif-plugin/depends/libavif-${{ env.LIBAVIF_VERSION }}
           key:
             ${{ env.LIBAVIF_VERSION }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*') }}-${{ matrix.os }}-${{ matrix.platform }}
 
       - name: Cache ccache/sccache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ccache
@@ -216,7 +216,7 @@ jobs:
           sudo chown -R $(whoami):$(id -ng) ccache ||:
           sudo chown -R $(whoami):$(id -ng) sccache ||:
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: wheelhouse/*.whl
@@ -247,7 +247,7 @@ jobs:
         path: winbuild\depends
 
     - name: Cache pip
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ~\AppData\Local\pip\Cache
         key:
@@ -258,7 +258,7 @@ jobs:
 
     # sets env: pythonLocation
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
         architecture: ${{ matrix.architecture }}
@@ -281,7 +281,7 @@ jobs:
 
     - name: Cache build
       id: build-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: winbuild\build
         key:
@@ -349,7 +349,7 @@ jobs:
       shell: pwsh
 
     - name: Upload errors
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: errors
@@ -361,7 +361,7 @@ jobs:
       shell: pwsh
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
         flags: GHA_Windows
@@ -375,7 +375,7 @@ jobs:
         winbuild\\build\\build_pillow_avif_plugin.cmd bdist_wheel
       shell: cmd
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       if: "github.event_name == 'push'"
       with:
         name: wheels
@@ -395,7 +395,7 @@ jobs:
     if: "startsWith(github.ref, 'refs/tags/')"
     needs: [build, windows]
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: wheels
 
