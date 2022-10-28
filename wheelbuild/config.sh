@@ -5,7 +5,7 @@ CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
 LIBAVIF_VERSION=0.11.0
-CARGO_C_VERSION=0.9.5
+CARGO_C_VERSION=0.9.13
 AOM_VERSION=3.5.0
 DAV1D_VERSION=1.0.0
 SVT_AV1_VERSION=1.3.0
@@ -163,33 +163,18 @@ function install_cargo_c {
     echo "::group::Install cargo-c"
     if [ -n "$IS_MACOS" ]; then
         brew install cargo-c
-    elif [[ "$PLAT" != "x86_64" ]] || [[ -n "$IS_ALPINE" ]]; then
-        if [[ "$MB_ML_VER" == "1" ]]; then
-            build_openssl
-        fi
-        CARGO_C_VENDOR_TGZ=$ARCHIVE_SDIR/cargo-c-vendor-$CARGO_C_VERSION.tar.gz
-        if [ -e $CARGO_C_VENDOR_TGZ ]; then
-            mkdir -p "$HOME/.cargo"
-            VENDOR_DIR=$(pwd -P)/$ARCHIVE_SDIR/vendor
-            rm -rf $VENDOR_DIR
-            tar -C $ARCHIVE_SDIR -zxf $CARGO_C_VENDOR_TGZ
-            cat > ~/.cargo/config <<EOF
-[source.crates-io]
-replace-with = "vendored-sources"
-
-[source.vendored-sources]
-directory = "$VENDOR_DIR"
-EOF
-        fi
-        fetch_unpack \
-            "https://github.com/lu-zero/cargo-c/archive/refs/tags/v$CARGO_C_VERSION.tar.gz" \
-            "cargo-c-$CARGO_C_VERSION.tar.gz"
-        (cd cargo-c-$CARGO_C_VERSION \
-            && cargo install --path .)
     else
         mkdir -p $HOME/.cargo/bin
+        local archive_fname
+        if [ "$PLAT" == "arm64" ]; then
+            archive_fname=cargo-c-linux-aarch64.tar.gz
+        elif [ "$PLAT" == "i686" ]; then
+            archive_fname=cargo-c-linux-i686.tar.gz
+        else
+            archive_fname=cargo-c-linux.tar.gz
+        fi
         fetch_unpack \
-            https://github.com/lu-zero/cargo-c/releases/download/v$CARGO_C_VERSION/cargo-c-linux.tar.gz \
+            https://github.com/fdintino/cargo-c/releases/download/v$CARGO_C_VERSION/$archive_fname  \
             cargo-c-$CARGO_C_VERSION-linux.tar.gz
         mv cargo-c{api,build,install} $HOME/.cargo/bin
     fi
