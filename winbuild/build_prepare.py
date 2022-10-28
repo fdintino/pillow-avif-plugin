@@ -147,9 +147,14 @@ deps = {
         "libs": [r"libpng16.lib"],
     },
     "libavif": {
-        "url": "https://github.com/AOMediaCodec/libavif/archive/v0.10.1.tar.gz",
-        "filename": "libavif-0.10.1.tar.gz",
-        "dir": "libavif-0.10.1",
+        "url": "https://github.com/AOMediaCodec/libavif/archive/v0.11.0.tar.gz",
+        "filename": "libavif-0.11.0.tar.gz",
+        "dir": "libavif-0.11.0",
+        "patch": {
+            "src/codec_aom.c": {
+                "if (aomCpuUsed >= 7)": "if (0)",
+            },
+        },
         "build": [
             cmd_append("PATH", r"{program_files}\Meson"),
             cmd_cd("ext"),
