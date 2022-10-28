@@ -11,11 +11,15 @@ Changelog
   ``save()``).
 * **Fixed**: ``tile_cols`` encoder setting (the ``save()`` method was using
   the value passed to ``tile_rows`` instead)
+* **Fixed**: Attempts to open non-AV1 images in HEIF containers (e.g. HEIC)
+  now raises UnidentifiedImageError, not ValueError. Fixes `#19`_.
 * **CI**: manylinux2014 aarch64 wheels
 * **CI**: bundle libyuv and libsharpyuv
 * **CI**: Python 3.11 wheels
 * **CI**: Update bundled libraries (see table below, changes from previous
   release in bold)
+
+.. _#19: https://github.com/fdintino/pillow-avif-plugin/issues/19
 
 .. table::
 

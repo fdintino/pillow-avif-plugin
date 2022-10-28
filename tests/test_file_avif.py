@@ -648,6 +648,11 @@ class TestAvifAnimation:
         with pytest.raises(ValueError):
             frame1.save(temp_file, save_all=True, append_images=[frame2], duration=100)
 
+    def test_heif_raises_unidentified_image_error(self):
+        with pytest.raises(UnidentifiedImageError or IOError):
+            with Image.open("tests/images/rgba10.heif"):
+                pass
+
     @skip_unless_avif_version_gte((0, 9, 0))
     @pytest.mark.parametrize("alpha_premultipled", [False, True])
     def test_alpha_premultiplied_true(self, alpha_premultipled):

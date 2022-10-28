@@ -125,10 +125,10 @@ normalize_tiles_log2(int value) {
 static PyObject *
 exc_type_for_avif_result(avifResult result) {
     switch (result) {
-        case AVIF_RESULT_INVALID_FTYP:
         case AVIF_RESULT_INVALID_EXIF_PAYLOAD:
         case AVIF_RESULT_INVALID_CODEC_SPECIFIC_OPTION:
             return PyExc_ValueError;
+        case AVIF_RESULT_INVALID_FTYP:
         case AVIF_RESULT_BMFF_PARSE_FAILED:
         case AVIF_RESULT_TRUNCATED_DATA:
         case AVIF_RESULT_NO_CONTENT:
