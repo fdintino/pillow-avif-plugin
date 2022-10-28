@@ -1,0 +1,43 @@
+From bf9d1f8d2b649ee8a02e6e8792075330bde185d4 Mon Sep 17 00:00:00 2001
+From: James Zern <jzern@google.com>
+Date: Thu, 27 Oct 2022 18:17:47 -0700
+Subject: [PATCH] fix monochrome encoding in realtime mode
+
+this is non-exhaustive, but covers the file in the issue report and the
+newly added MonochromeRealtimeTest.
+
+Bug: https://github.com/AOMediaCodec/libavif/issues/1190
+Change-Id: I947a5d926daaae9c0a667114996ddd7bf9ff2013
+---
+ av1/encoder/nonrd_pickmode.c |  3 ++-
+ av1/encoder/var_based_part.c |  2 +-
+ test/monochrome_test.cc      | 47 +++++++++++++++++++++++++++++-------
+ 3 files changed, 41 insertions(+), 11 deletions(-)
+
+diff --git a/av1/encoder/nonrd_pickmode.c b/av1/encoder/nonrd_pickmode.c
+index 7267f9e39b..009b3c360d 100644
+--- a/av1/encoder/nonrd_pickmode.c
++++ b/av1/encoder/nonrd_pickmode.c
+@@ -2777,7 +2777,8 @@ void set_color_sensitivity(AV1_COMP *cpi, MACROBLOCK *x, BLOCK_SIZE bsize,
+     x->color_sensitivity[1] = 0;
+     return;
+   }
+-  for (int i = 1; i <= 2; ++i) {
++  const int num_planes = av1_num_planes(&cpi->common);
++  for (int i = 1; i < num_planes; ++i) {
+     if (x->color_sensitivity[i - 1] == 2 || source_variance < 50) {
+       struct macroblock_plane *const p = &x->plane[i];
+       const BLOCK_SIZE bs =
+diff --git a/av1/encoder/var_based_part.c b/av1/encoder/var_based_part.c
+index efcb5a71f0..63f807733b 100644
+--- a/av1/encoder/var_based_part.c
++++ b/av1/encoder/var_based_part.c
+@@ -1237,7 +1237,7 @@ static void setup_planes(AV1_COMP *cpi, MACROBLOCK *x, unsigned int *y_sad,
+     set_ref_ptrs(cm, xd, mi->ref_frame[0], mi->ref_frame[1]);
+     av1_enc_build_inter_predictor(cm, xd, mi_row, mi_col, NULL,
+                                   cm->seq_params->sb_size, AOM_PLANE_Y,
+-                                  AOM_PLANE_V);
++                                  num_planes - 1);
+   }
+ }
+ 

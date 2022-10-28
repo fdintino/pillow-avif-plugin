@@ -232,6 +232,11 @@ function build_aom {
                 && patch -p1 -i $CONFIG_DIR/aom-fix-stack-size.patch)
             extra_cmake_flags+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
         fi
+
+        # Fix for https://github.com/AOMediaCodec/libavif/issues/1190
+        (cd libaom-$AOM_VERSION \
+            && patch -p1 -i $CONFIG_DIR/aom-3.5.0-monochrome-realtime-encode.patch)
+
         mkdir libaom-$AOM_VERSION/build/work
         (cd libaom-$AOM_VERSION/build/work \
             && cmake \
@@ -497,9 +502,6 @@ function build_libavif {
     LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LOCAL_LIBYUV=ON)
 
     echo "::group::Build libavif"
-
-    (cd libavif-$LIBAVIF_VERSION \
-        && patch -p1 -i $CONFIG_DIR/libavif-disable-aom_usage_realtime.patch)
 
     mkdir -p libavif-$LIBAVIF_VERSION/build
 
