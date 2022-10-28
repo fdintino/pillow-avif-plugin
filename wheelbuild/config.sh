@@ -302,6 +302,8 @@ EOF
               "--prefix=${BUILD_PREFIX}" \
               --default-library=static \
               --buildtype=release \
+              -D enable_tools=false \
+              -D enable_tests=false \
              "${meson_flags[@]}" \
         && SCCACHE_DIR="$SCCACHE_DIR" ninja -vC build install)
     echo "::endgroup::"
