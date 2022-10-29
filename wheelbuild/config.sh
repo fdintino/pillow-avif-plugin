@@ -188,56 +188,57 @@ function build_aom {
 
     local cmake_flags=()
 
-    if [ -n "$IS_MACOS" ] && [ "$PLAT" != "arm64" ]; then
-        brew install aom
-    else
-        fetch_unpack \
-            https://storage.googleapis.com/aom-releases/libaom-$AOM_VERSION.tar.gz
-
-        if [ ! -n "$IS_MACOS" ] && [[ "$MB_ML_VER" == "1" ]]; then
-            (cd libaom-$AOM_VERSION \
-                && patch -p1 -i $CONFIG_DIR/aom-2.0.2-manylinux1.patch)
-        fi
-        if [ ! -n "$IS_MACOS" ]; then
-            cmake_flags+=("-DCMAKE_C_FLAGS=-fPIC")
-        elif [ "$PLAT" == "arm64" ]; then
-            cmake_flags+=(\
-                -DAOM_TARGET_CPU=arm64 \
-                -DCONFIG_RUNTIME_CPU_DETECT=0 \
-                -DCMAKE_SYSTEM_PROCESSOR=arm64 \
-                -DCMAKE_OSX_ARCHITECTURES=arm64)
-        fi
-        if [[ $(type -P ccache) ]]; then
-            cmake_flags+=(\
-                -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
-                -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
-        fi
-        if [ -n "$IS_ALPINE" ]; then
-            (cd libaom-$AOM_VERSION \
-                && patch -p1 -i $CONFIG_DIR/aom-fix-stack-size.patch)
-            extra_cmake_flags+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
-        fi
-
-        # Fix for https://github.com/AOMediaCodec/libavif/issues/1190
-        (cd libaom-$AOM_VERSION \
-            && patch -p1 -i $CONFIG_DIR/aom-3.5.0-monochrome-realtime-encode.patch)
-
-        mkdir libaom-$AOM_VERSION/build/work
-        (cd libaom-$AOM_VERSION/build/work \
-            && cmake \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_INSTALL_PREFIX="${BUILD_PREFIX}" \
-                -DCMAKE_INSTALL_LIBDIR=lib \
-                -DBUILD_SHARED_LIBS=0 \
-                -DENABLE_DOCS=0 \
-                -DENABLE_EXAMPLES=0 \
-                -DENABLE_TESTDATA=0 \
-                -DENABLE_TESTS=0 \
-                -DENABLE_TOOLS=0 \
-                "${cmake_flags[@]}" \
-                ../.. \
-            && make install)
+    if [ -n "$IS_MACOS" ]; then
+        brew uninstall aom ||:
     fi
+
+    fetch_unpack \
+        https://storage.googleapis.com/aom-releases/libaom-$AOM_VERSION.tar.gz
+
+    if [ ! -n "$IS_MACOS" ] && [[ "$MB_ML_VER" == "1" ]]; then
+        (cd libaom-$AOM_VERSION \
+            && patch -p1 -i $CONFIG_DIR/aom-2.0.2-manylinux1.patch)
+    fi
+    if [ ! -n "$IS_MACOS" ]; then
+        cmake_flags+=("-DCMAKE_C_FLAGS=-fPIC")
+    elif [ "$PLAT" == "arm64" ]; then
+        cmake_flags+=(\
+            -DAOM_TARGET_CPU=arm64 \
+            -DCONFIG_RUNTIME_CPU_DETECT=0 \
+            -DCMAKE_SYSTEM_PROCESSOR=arm64 \
+            -DCMAKE_OSX_ARCHITECTURES=arm64)
+    fi
+    if [[ $(type -P ccache) ]]; then
+        cmake_flags+=(\
+            -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
+    fi
+    if [ -n "$IS_ALPINE" ]; then
+        (cd libaom-$AOM_VERSION \
+            && patch -p1 -i $CONFIG_DIR/aom-fix-stack-size.patch)
+        extra_cmake_flags+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
+    fi
+
+    # Fix for https://github.com/AOMediaCodec/libavif/issues/1190
+    (cd libaom-$AOM_VERSION \
+        && patch -p1 -i $CONFIG_DIR/aom-3.5.0-monochrome-realtime-encode.patch)
+
+    mkdir libaom-$AOM_VERSION/build/work
+    (cd libaom-$AOM_VERSION/build/work \
+        && cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${BUILD_PREFIX}" \
+            -DCMAKE_INSTALL_LIBDIR=lib \
+            -DBUILD_SHARED_LIBS=0 \
+            -DENABLE_DOCS=0 \
+            -DENABLE_EXAMPLES=0 \
+            -DENABLE_TESTDATA=0 \
+            -DENABLE_TESTS=0 \
+            -DENABLE_TOOLS=0 \
+            "${cmake_flags[@]}" \
+            ../.. \
+        && make install)
+
     touch aom-stamp
 
     echo "::endgroup::"
