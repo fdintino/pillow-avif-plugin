@@ -189,7 +189,7 @@ function build_aom {
     local cmake_flags=()
 
     if [ -n "$IS_MACOS" ]; then
-        brew uninstall aom ||:
+        brew remove --ignore-dependencies aom php imagemagick libavif libheif gd composer
     fi
 
     fetch_unpack \
