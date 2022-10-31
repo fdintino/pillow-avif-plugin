@@ -185,7 +185,11 @@ jobs:
         if: ${{ matrix.platform == 'aarch64' }}
 
       - name: Setup env_vars
-        run: echo "export LIBAVIF_VERSION=${{ env.LIBAVIF_VERSION }}" > env_vars.sh
+        run: |
+          cat <<'EOF' >> env_vars.sh
+          export LIBAVIF_VERSION=${{ env.LIBAVIF_VERSION }}"
+          export GITHUB_ACTIONS=1"
+          EOF
 
       - name: Cache build
         id: build-cache
