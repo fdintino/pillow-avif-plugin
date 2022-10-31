@@ -1,5 +1,5 @@
 # Used by multibuild for building wheels
-set -exo pipefail
+set -eo pipefail
 
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
@@ -15,10 +15,61 @@ LIBYUV_SHA=f9fda6e7
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
+export GITHUB_ACTIONS=1
 
 if [[ "$MB_ML_VER" == "1" ]]; then
     RAV1E_VERSION=0.4.1
     CARGO_C_VERSION=0.7.2
+fi
+
+# Convenience functions to run shell commands suppressed from "set -x" tracing
+shopt -s expand_aliases
+alias trace_on='{ set -x; } 2>/dev/null'
+alias trace_off='{ set +x; } 2>/dev/null'
+alias trace_suppress='{ [[ $- =~ .*x.* ]] && trace_enabled=1 || trace_enabled=0; set +x; } 2>/dev/null'
+alias trace_restore='{ [ $trace_enabled -eq 1 ] && trace_on || trace_off; } 2>/dev/null'
+
+call_and_restore_trace() {
+    local rc
+    local force_trace
+    if [[ "$1" == "-x" ]]; then
+      force_trace=1
+      shift
+    fi
+    "$@"
+    rc=$?
+    [ -n "$force_trace" ] && trace_on || trace_restore
+    { return $rc; } 2>/dev/null
+}
+alias echo='trace_suppress; call_and_restore_trace builtin echo'
+
+function echo_if_gha() {
+  [ -n "$GITHUB_ACTIONS" ] && builtin echo "$@" || true
+}
+
+GHA_ACTIVE_GROUP=""
+function __group_start_ {
+  local was_active_group="$GHA_ACTIVE_GROUP"
+  [ -n "$GHA_ACTIVE_GROUP" ] && echo_if_gha "::endgroup::" ||:
+  GHA_ACTIVE_GROUP="1"
+  echo_if_gha -n "::group::"
+}
+
+alias group_start='trace_suppress; __group_start_; call_and_restore_trace -x echo_if_gha'
+
+function __group_end_ {
+  ACTIVE_GROUP=""
+  echo_if_gha "::endgroup::"
+  trace_off
+}
+
+alias group_end='trace_suppress; __group_end_'
+
+
+# If we're running in GitHub Actions, then send redirect stderr to
+# stdout to ensure that they are interleaved correctly
+if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+  exec 2>&1
 fi
 
 function install_ccache {
@@ -28,6 +79,7 @@ function install_ccache {
     fi
     ln -s $PWD/ccache $HOME/.ccache
 
+    group_start "Install ccache"
     if [ -n "$IS_MACOS" ]; then
         brew install ccache
         export CCACHE_CPP2=1
@@ -54,10 +106,11 @@ function install_ccache {
             suppress yum_install ccache
         fi
     fi
+    group_end
 }
 
 function install_sccache {
-    echo "::group::Install sccache"
+    group_start "Install sccache"
     if [ -n "$IS_MACOS" ]; then
         brew install sccache
     elif [ ! -e /usr/local/bin/sccache ]; then
@@ -74,7 +127,7 @@ function install_sccache {
         export RUSTC_WRAPPER=/usr/local/bin/sccache
         export SCCACHE_DIR=$PWD/sccache
     fi
-    echo "::endgroup::"
+    group_end
 }
 
 function install_meson {
@@ -82,7 +135,7 @@ function install_meson {
 
     install_ninja
 
-    echo "::group::Install meson"
+    group_start "Install meson"
     if [ -n "$IS_MACOS" ]; then
         brew install meson
     else
@@ -99,14 +152,16 @@ function install_meson {
             $PYTHON_EXE -m pip install meson
         fi
     fi
-    echo "::endgroup::"
+    group_end
 
     touch meson-stamp
 }
 
 function install_ninja {
     if [ -e ninja-stamp ]; then return; fi
-    echo "::group::Install ninja"
+
+    group_start "Install ninja"
+
     if [ -n "$IS_MACOS" ]; then
         brew install ninja
     else
@@ -114,13 +169,15 @@ function install_ninja {
         local ninja_exe=$(dirname $PYTHON_EXE)/ninja
         ln -s $ninja_exe /usr/local/bin/ninja-build
     fi
-    echo "::endgroup::"
+
+    group_end
     touch ninja-stamp
 }
 
 function install_rust {
     if [ -e rust-stamp ]; then return; fi
-    echo "::group::Install rust"
+
+    group_start "Install rust"
 
     if [[ -n "$IS_ALPINE" ]]; then
         # Increase pthread stack size for musl libc
@@ -151,7 +208,9 @@ function install_rust {
     if [ -e $HOME/.cargo/env ]; then
         source $HOME/.cargo/env
     fi
-    echo "::endgroup::"
+
+    group_end
+
     touch rust-stamp
 }
 
@@ -160,7 +219,8 @@ function install_cargo_c {
 
     if which cargo-cbuild 1>/dev/null 2>/dev/null; then return; fi
 
-    echo "::group::Install cargo-c"
+    group_start "Install cargo-c"
+
     if [ -n "$IS_MACOS" ]; then
         brew install cargo-c
     else
@@ -178,13 +238,14 @@ function install_cargo_c {
             cargo-c-$CARGO_C_VERSION-linux.tar.gz
         mv cargo-c{api,build,install} $HOME/.cargo/bin
     fi
-    echo "::endgroup::"
+
+    group_end
 }
 
 function build_aom {
     if [ -e aom-stamp ]; then return; fi
 
-    echo "::group::Build aom"    
+    group_start "Build aom"
 
     local cmake_flags=()
 
@@ -238,17 +299,12 @@ function build_aom {
             "${cmake_flags[@]}" \
             ../.. \
         && make install)
-
+    group_end
     touch aom-stamp
-
-    echo "::endgroup::"
 }
 
 function build_dav1d {
     if [ -e dav1d-stamp ]; then return; fi
-
-    install_meson
-    install_ninja
 
     local cflags="$CFLAGS"
     local ldflags="$LDFLAGS"
@@ -261,7 +317,7 @@ function build_dav1d {
         CXX="$(type -P ccache) $CXX"
     fi
 
-    echo "::group::Build dav1d"
+    group_start "Build dav1d"
     fetch_unpack "https://code.videolan.org/videolan/dav1d/-/archive/$DAV1D_VERSION/dav1d-$DAV1D_VERSION.tar.gz"
 
     cat <<EOF > dav1d-$DAV1D_VERSION/config.txt
@@ -297,14 +353,14 @@ EOF
               -D enable_tests=false \
              "${meson_flags[@]}" \
         && SCCACHE_DIR="$SCCACHE_DIR" ninja -vC build install)
-    echo "::endgroup::"
+    group_end
     touch dav1d-stamp
 }
 
 function build_svt_av1 {
     if [ -e svt-av1-stamp ]; then return; fi
 
-    echo "::group::Build SVT-AV1"
+    group_start "Build SVT-AV1"
 
     fetch_unpack \
         "https://gitlab.com/AOMediaCodec/SVT-AV1/-/archive/v$SVT_AV1_VERSION/SVT-AV1-v$SVT_AV1_VERSION.tar.gz"
@@ -329,7 +385,7 @@ function build_svt_av1 {
         && make install \
         && cp SvtAv1Enc.pc $BUILD_PREFIX/lib/pkgconfig)
 
-    echo "::endgroup::"
+    group_end
 
     touch svt-av1-stamp
 }
@@ -337,7 +393,7 @@ function build_svt_av1 {
 function build_rav1e {
     install_cargo_c
 
-    echo "::group::Build rav1e"
+    group_start "Build rav1e"
 
     RAV1E_CARGO_VENDOR_TGZ=$ARCHIVE_SDIR/rav1e-vendor-$RAV1E_VERSION.tar.gz
     if [ -e $RAV1E_CARGO_VENDOR_TGZ ]; then
@@ -378,12 +434,13 @@ EOF
         sed -i 's/-lgcc_s/-lgcc_eh/g' "${BUILD_PREFIX}/lib/pkgconfig/rav1e.pc"
     fi
 
-    echo "::endgroup::"
+    group_end
 }
 
 function build_libsharpyuv {
     if [ -e libsharpyuv-stamp ]; then return; fi
-     echo "::group::Build libsharpyuv"
+
+    group_start "Build libsharpyuv"
     fetch_unpack https://github.com/webmproject/libwebp/archive/$LIBWEBP_SHA.tar.gz libwebp-$LIBWEBP_SHA.tar.gz
 
     mkdir -p libwebp-$LIBWEBP_SHA/build
@@ -402,13 +459,15 @@ function build_libsharpyuv {
             -DBUILD_SHARED_LIBS=OFF \
              "${cmake_flags[@]}" \
         && ninja sharpyuv)
-    echo "::endgroup::"
+    group_end
     touch libsharpyuv-stamp
 }
 
 function build_libyuv {
     if [ -e libyuv-stamp ]; then return; fi
-    echo "::group::Build libyuv"
+
+    group_start "Build libyuv"
+
     mkdir -p libyuv-$LIBYUV_SHA
     (cd libyuv-$LIBYUV_SHA && \
         fetch_unpack "https://chromium.googlesource.com/libyuv/libyuv/+archive/$LIBYUV_SHA.tar.gz")
@@ -428,7 +487,7 @@ function build_libyuv {
             -DCMAKE_BUILD_TYPE=Release \
             "${cmake_flags[@]}" .. \
         && ninja yuv)
-    echo "::endgroup::"
+    group_end
     touch libyuv-stamp
 }
 
@@ -475,9 +534,13 @@ function build_libavif {
             -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
     fi
 
+    group_start "Download libavif source"
+
     fetch_unpack \
         "https://github.com/AOMediaCodec/libavif/archive/v$LIBAVIF_VERSION.tar.gz" \
         "libavif-$LIBAVIF_VERSION.tar.gz"
+
+    group_end
 
     build_libsharpyuv
     mv libwebp-$LIBWEBP_SHA libavif-$LIBAVIF_VERSION/ext/libwebp
@@ -487,7 +550,7 @@ function build_libavif {
     mv libyuv-$LIBYUV_SHA libavif-$LIBAVIF_VERSION/ext/libyuv
     LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LOCAL_LIBYUV=ON)
 
-    echo "::group::Build libavif"
+    group_start "Build libavif"
 
     mkdir -p libavif-$LIBAVIF_VERSION/build
 
@@ -498,11 +561,11 @@ function build_libavif {
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && make install)
 
-    echo "::endgroup::"
+    group_end
 }
 
 function build_nasm {
-    echo "::group::Build nasm"
+    group_start "Build nasm"
     local CC=$(type -P "${CC:-gcc}")
     local CXX=$(type -P "${CXX:-g++}")
     if [[ $(type -P ccache) ]]; then
@@ -510,11 +573,11 @@ function build_nasm {
         CXX="$(type -P ccache) $CXX"
     fi
     SCCACHE_DIR="$SCCACHE_DIR" CC="$CC" CXX="$CXX" build_simple nasm 2.15.05 https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/
-    echo "::endgroup::"
+    group_end
 }
 
 function install_cmake {
-    echo "::group::Install cmake"
+    group_start "Install cmake"
     if [ -n "$IS_MACOS" ]; then
         brew install cmake
     else
@@ -524,20 +587,20 @@ function install_cmake {
             $PYTHON_EXE -m pip install cmake
         fi
     fi
-    echo "::endgroup::"
+    group_end
 }
 
 function install_zlib {
     if [ ! -n "$IS_MACOS" ]; then
-        echo "::group::Install zlib"
+        group_start "Install zlib"
         build_zlib
-        echo "::endgroup::"
+        group_end
     fi
 }
 
 function build_openssl {
     if [ -e openssl-stamp ]; then return; fi
-    echo "::group::Building openssl"
+    group_start "Building openssl"
     if [[ "$MB_ML_VER" == "1" ]]; then
         # Install new Perl because OpenSSL configure scripts require > 5.10.0.
         curl -L http://cpanmin.us | perl - App::cpanminus
@@ -561,12 +624,12 @@ function build_openssl {
         && SCCACHE_DIR="$SCCACHE_DIR" make -j4 \
         && make install_sw)
     touch openssl-stamp
-    echo "::endgroup::"
+    group_end
 }
 
 function ensure_openssl {
     if [ ! -n "$IS_MACOS" ]; then
-        echo "::group::Install openssl"
+        group_start "Install openssl"
         if [ -n "$IS_ALPINE" ]; then
             apk add libressl-dev openssl-dev
         elif [[ $MB_ML_VER == "_2_24" ]]; then
@@ -574,13 +637,13 @@ function ensure_openssl {
         else
             yum_install openssl-devel
         fi
-        echo "::endgroup::"
+        group_end
     fi
 }
 
 function ensure_sudo {
     if [ ! -e /usr/bin/sudo ]; then
-        echo "::group::Install sudo"
+        group_start "Install sudo"
         if [ -n "$IS_ALPINE" ]; then
             apk add sudo
         elif [[ $MB_ML_VER == "_2_24" ]]; then
@@ -588,19 +651,19 @@ function ensure_sudo {
         else
             yum_install sudo
         fi
-        echo "::endgroup::"
+        group_end
     fi
 }
 
 function append_licenses {
-    echo "::group::Append licenses"
+    group_start "Append licenses"
     for filename in $REPO_DIR/wheelbuild/dependency_licenses/*.txt; do
       echo -e "\n\n----\n\n$(basename $filename | cut -f 1 -d '.')\n" | cat >> $REPO_DIR/LICENSE
       cat $filename >> $REPO_DIR/LICENSE
     done
     echo -e "\n\n" | cat >> $REPO_DIR/LICENSE
     cat $REPO_DIR/wheelbuild/dependency_licenses/PATENTS >> $REPO_DIR/LICENSE
-    echo "::endgroup::"
+    group_end
 }
 
 function pre_build {
@@ -613,20 +676,16 @@ function pre_build {
     install_sccache
     install_ccache
 
-    local libavif_build_dir="$REPO_DIR/depends/libavif-$LIBAVIF_VERSION/build"
+    if [ "$PLAT" != "arm64" ]; then
+        build_nasm
+    fi
+    install_cmake
+    install_ninja
+    install_meson
+    install_rust
 
-    if [ ! -e "$libavif_build_dir" ]; then
-        if [ "$PLAT" != "arm64" ]; then
-            build_nasm
-        fi
-        install_cmake
-        install_ninja
-        install_meson
-
-        install_rust
-        if [ -e $HOME/.cargo/env ]; then
-            source $HOME/.cargo/env
-        fi
+    if [ -e $HOME/.cargo/env ]; then
+        source $HOME/.cargo/env
     fi
 
     build_libavif
