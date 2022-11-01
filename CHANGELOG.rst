@@ -1,6 +1,17 @@
 Changelog
 =========
 
+1.3.1 (Nov 1, 2022)
+-------------------
+
+* **Fixed**: Distributed OS X wheels now include patch for libaom segmentation
+  fault (see `AOMediaCodec/libavif#1190`_ and `aom@165281`_). The bundled
+  static libaom was patched for all other wheels, but because of a build issue
+  it was missing from the 1.3.0 mac wheels.
+
+.. _AOMediaCodec/libavif#1190: https://github.com/AOMediaCodec/libavif/issues/1190
+.. _aom@165281: https://aomedia-review.googlesource.com/c/aom/+/165281/1
+
 1.3.0 (Oct 29, 2022)
 --------------------
 
