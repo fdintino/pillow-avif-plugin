@@ -43,13 +43,13 @@ call_and_restore_trace() {
 alias echo='trace_suppress; call_and_restore_trace builtin echo'
 
 function echo_if_gha() {
-  [ -n "$GITHUB_ACTIONS" ] && builtin echo "$@"
+  [ -n "$GITHUB_ACTIONS" ] && builtin echo "$@" || true
 }
 
 GHA_ACTIVE_GROUP=""
 function __group_start_ {
   local was_active_group="$GHA_ACTIVE_GROUP"
-  [ -n "$GHA_ACTIVE_GROUP" ] && echo_if_gha "::endgroup::"
+  [ -n "$GHA_ACTIVE_GROUP" ] && echo_if_gha "::endgroup::" ||:
   GHA_ACTIVE_GROUP="1"
   echo_if_gha -n "::group::"
 }
