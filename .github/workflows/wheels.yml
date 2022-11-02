@@ -228,7 +228,7 @@ jobs:
           - architecture: "x64"
             platform-vcvars: "x86_amd64"
             platform-msbuild: "x64"
-    timeout-minutes: 30
+    timeout-minutes: 300
 
     name: ${{ matrix.python-version }} windows ${{ matrix.architecture }}
 
