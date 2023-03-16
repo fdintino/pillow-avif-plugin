@@ -121,9 +121,9 @@ deps = {
         "bins": ["cjpeg.exe", "djpeg.exe"],
     },
     "zlib": {
-        "url": "http://zlib.net/zlib1211.zip",
-        "filename": "zlib1211.zip",
-        "dir": "zlib-1.2.11",
+        "url": "http://zlib.net/zlib1213.zip",
+        "filename": "zlib1213.zip",
+        "dir": "zlib-1.2.13",
         "build": [
             cmd_nmake(r"win32\Makefile.msc", "clean"),
             cmd_nmake(r"win32\Makefile.msc", "zlib.lib"),
