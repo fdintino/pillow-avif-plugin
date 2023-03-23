@@ -5,22 +5,16 @@ CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
 LIBAVIF_VERSION=0.11.0
-CARGO_C_VERSION=0.9.13
 AOM_VERSION=3.5.0
 DAV1D_VERSION=1.0.0
 SVT_AV1_VERSION=1.3.0
-RAV1E_VERSION=0.5.1
+RAV1E_VERSION=p20230321
 LIBWEBP_SHA=15a91ab179b0b605727d16fb751c12674da9dfec
 LIBYUV_SHA=f9fda6e7
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
 export GITHUB_ACTIONS=1
-
-if [[ "$MB_ML_VER" == "1" ]]; then
-    RAV1E_VERSION=0.4.1
-    CARGO_C_VERSION=0.7.2
-fi
 
 # Convenience functions to run shell commands suppressed from "set -x" tracing
 shopt -s expand_aliases
@@ -124,7 +118,6 @@ function install_sccache {
     fi
     if [ -e /usr/local/bin/sccache ]; then
         export USE_SCCACHE=1
-        export RUSTC_WRAPPER=/usr/local/bin/sccache
         export SCCACHE_DIR=$PWD/sccache
     fi
     group_end
@@ -172,74 +165,6 @@ function install_ninja {
 
     group_end
     touch ninja-stamp
-}
-
-function install_rust {
-    if [ -e rust-stamp ]; then return; fi
-
-    group_start "Install rust"
-
-    if [[ -n "$IS_ALPINE" ]]; then
-        # Increase pthread stack size for musl libc
-        export RUSTFLAGS="-C link-args=-Wl,-z,stack-size=2097152 -C target-feature=-crt-static"
-    fi
-
-    if [ -n "$IS_MACOS" ]; then
-        if [ "$PLAT" == "arm64" ]; then
-            brew install rustup-init
-            rustup-init -y --target aarch64-apple-darwin
-        else
-            brew install rust
-        fi
-    else
-        if [[ "$MB_ML_VER" == "1" ]]; then
-            # Download and use old rustup-init that's compatible with glibc on el5
-            curl -sLO https://static.rust-lang.org/rustup/archive/1.22.1/$PLAT-unknown-linux-gnu/rustup-init
-            chmod u+x rustup-init
-            ./rustup-init --default-toolchain nightly-2020-07-18 -y
-        elif [[ "$MB_ML_VER" == "2010" ]]; then
-            curl -sLO https://static.rust-lang.org/rustup/archive/1.25.1/$PLAT-unknown-linux-gnu/rustup-init
-            chmod u+x rustup-init
-            ./rustup-init --default-toolchain 1.63.0 -y
-        else
-            curl https://sh.rustup.rs -sSf | /bin/sh -s -- -y
-        fi
-    fi
-    if [ -e $HOME/.cargo/env ]; then
-        source $HOME/.cargo/env
-    fi
-
-    group_end
-
-    touch rust-stamp
-}
-
-function install_cargo_c {
-    install_rust
-
-    if which cargo-cbuild 1>/dev/null 2>/dev/null; then return; fi
-
-    group_start "Install cargo-c"
-
-    if [ -n "$IS_MACOS" ]; then
-        brew install cargo-c
-    else
-        mkdir -p $HOME/.cargo/bin
-        local archive_fname
-        if [ "$PLAT" == "arm64" ]; then
-            archive_fname=cargo-c-linux-aarch64.tar.gz
-        elif [ "$PLAT" == "i686" ]; then
-            archive_fname=cargo-c-linux-i686.tar.gz
-        else
-            archive_fname=cargo-c-linux.tar.gz
-        fi
-        fetch_unpack \
-            https://github.com/fdintino/cargo-c/releases/download/v$CARGO_C_VERSION/$archive_fname  \
-            cargo-c-$CARGO_C_VERSION-linux.tar.gz
-        mv cargo-c{api,build,install} $HOME/.cargo/bin
-    fi
-
-    group_end
 }
 
 function build_aom {
@@ -391,47 +316,29 @@ function build_svt_av1 {
 }
 
 function build_rav1e {
-    install_cargo_c
-
     group_start "Build rav1e"
 
-    RAV1E_CARGO_VENDOR_TGZ=$ARCHIVE_SDIR/rav1e-vendor-$RAV1E_VERSION.tar.gz
-    if [ -e $RAV1E_CARGO_VENDOR_TGZ ]; then
-        mkdir -p "$HOME/.cargo"
-        VENDOR_DIR=$(pwd -P)/$ARCHIVE_SDIR/vendor
-        rm -rf $VENDOR_DIR
-        tar -C $ARCHIVE_SDIR -zxf $RAV1E_CARGO_VENDOR_TGZ
-        cat > ~/.cargo/config <<EOF
-[source.crates-io]
-replace-with = "vendored-sources"
-
-[source.vendored-sources]
-directory = "$VENDOR_DIR"
-EOF
-    fi
-
-    fetch_unpack \
-        "https://github.com/xiph/rav1e/archive/v$RAV1E_VERSION.tar.gz" \
-        "rav1e-$RAV1E_VERSION.tar.gz"
-
-    # Strip rust version check
-    perl -p0i -e 's/(?<=fn rustc_version_check\(\) {).*?(?=\n}\n)//ms' \
-        rav1e-$RAV1E_VERSION/build.rs
-
-    local cargo_c_flags=()
     if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
-        cargo_c_flags+=(--target=aarch64-apple-darwin)
+        librav1e_tgz=librav1e-macos-aarch64.tar.gz
+    elif [ -n "$IS_MACOS" ]; then
+        librav1e_tgz=librav1e-macos.tar.gz
+    elif [ "$PLAT" == "aarch64" ]; then
+        librav1e_tgz=librav1e-linux-aarch64.tar.gz
+    elif [ "$PLAT" == "i686" ]; then
+        librav1e_tgz=librav1e-linux-i686.tar.gz
+    else
+        librav1e_tgz=librav1e-linux-generic.tar.gz
     fi
 
-    (cd rav1e-$RAV1E_VERSION \
-        && cargo cinstall \
-            --release \
-            --library-type=staticlib \
-            "--prefix=$BUILD_PREFIX" \
-            "${cargo_c_flags[@]}")
+    curl -sLo - \
+        https://github.com/fdintino/rav1e/releases/download/$RAV1E_VERSION/$librav1e_tgz \
+        | tar -C $BUILD_PREFIX -zxf -
 
     if [ ! -n "$IS_MACOS" ]; then
         sed -i 's/-lgcc_s/-lgcc_eh/g' "${BUILD_PREFIX}/lib/pkgconfig/rav1e.pc"
+        rm -rf $BUILD_PREFIX/lib/librav1e.so
+    else
+        rm -rf $BUILD_PREFIX/lib/librav1e.dylib
     fi
 
     group_end
@@ -676,13 +583,12 @@ function pre_build {
     install_sccache
     install_ccache
 
-    if [ "$PLAT" != "arm64" ]; then
+    if [ "$PLAT" != "arm64" ] && [ "$PLAT" != "aarch64" ]; then
         build_nasm
     fi
     install_cmake
     install_ninja
     install_meson
-    install_rust
 
     if [ -e $HOME/.cargo/env ]; then
         source $HOME/.cargo/env
