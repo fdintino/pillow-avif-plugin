@@ -25,7 +25,7 @@ sudo apt-get -qq install zlib1g-dev libpng-dev libjpeg-dev \
 if [ "$GHA_PYTHON_VERSION" == "2.7" ]; then
     python2 -m pip install tox tox-gh-actions
 else
-    python3 -m pip install tox tox-gh-actions
+    python3 -m pip install 'tox<4' tox-gh-actions
 fi
 
 python3 -m pip install -U pip

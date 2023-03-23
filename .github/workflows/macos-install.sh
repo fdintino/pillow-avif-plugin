@@ -7,7 +7,7 @@ brew install dav1d aom rav1e cmake
 if [ "$GHA_PYTHON_VERSION" == "2.7" ]; then
     python2 -m pip install -U tox tox-gh-actions
 else
-    python3 -m pip install -U tox tox-gh-actions
+    python3 -m pip install -U 'tox<4' tox-gh-actions
 fi
 
 # libavif
