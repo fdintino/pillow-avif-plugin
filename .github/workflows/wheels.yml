@@ -271,8 +271,9 @@ jobs:
         winbuild\depends\gs9533w32.exe /S
         echo "C:\Program Files (x86)\gs\gs9.53.3\bin" >> $env:GITHUB_PATH
 
-        # make cache key depend on VS version
-        & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" | find """catalog_buildVersion""" | ForEach-Object { $a = $_.split(" ")[1]; echo "::set-output name=vs::$a" }
+        & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" `
+          | find """catalog_buildVersion""" `
+          | ForEach-Object { $a = $_.split(" ")[1]; echo "vs=$a" >> $env:GITHUB_OUTPUT }
       shell: pwsh
 
     - name: Cache build
@@ -367,7 +368,7 @@ jobs:
       id: wheel
       if: "github.event_name == 'push'"
       run: |
-        for /f "tokens=3 delims=/" %%a in ("${{ github.ref }}") do echo ::set-output name=dist::dist-%%a
+        for /f "tokens=3 delims=/" %%a in ("${{ github.ref }}") do echo dist=dist-%%a >> %GITHUB_OUTPUT%
         winbuild\\build\\build_pillow_avif_plugin.cmd bdist_wheel
       shell: cmd
 
