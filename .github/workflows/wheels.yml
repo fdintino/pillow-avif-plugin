@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu-20.04", "macOS-10.15" ]
+        os: [ "ubuntu-20.04", "macos-11" ]
         python: [ "2.7", "3.7", "3.8", "3.9", "3.10", "3.11" ]
         platform: [ "x86_64", "i686" ]
         manylinux-version: [ "1", "2010" ]
@@ -26,9 +26,9 @@ jobs:
         mb-ml-libc: [ "manylinux" ]
         multibuild-sha: [ "34e970c4bc448b73af0127615fc4583b4f247369" ]
         exclude:
-          - os: "macOS-10.15"
+          - os: "macos-11"
             platform: "i686"
-          - os: "macOS-10.15"
+          - os: "macos-11"
             manylinux-version: "1"
           - python: "3.10"
             manylinux-version: "1"
@@ -39,7 +39,7 @@ jobs:
           - python: "3.11"
             multibuild-sha: "34e970c4bc448b73af0127615fc4583b4f247369"
         include:
-          - os: "macOS-10.15"
+          - os: "macos-11"
             os-name: "osx"
           - os: "ubuntu-20.04"
             manylinux-version: "1"
@@ -107,7 +107,7 @@ jobs:
             manylinux-version: "2014"
           - python: "3.11"
             platform: "x86_64"
-            os: "macOS-10.15"
+            os: "macos-11"
             os-name: "osx"
             macos-target: "10.10"
             multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
