@@ -486,7 +486,7 @@ function build_nasm {
 function install_cmake {
     group_start "Install cmake"
     if [ -n "$IS_MACOS" ]; then
-        brew install cmake
+        brew reinstall cmake
     else
         if [[ "$MB_ML_VER" == "1" ]]; then
             $PYTHON_EXE -m pip install 'cmake<3.23'
