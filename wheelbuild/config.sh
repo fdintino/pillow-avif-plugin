@@ -8,7 +8,7 @@ LIBAVIF_VERSION=0.11.0
 AOM_VERSION=3.5.0
 DAV1D_VERSION=1.0.0
 SVT_AV1_VERSION=1.3.0
-RAV1E_VERSION=p20230321
+RAV1E_VERSION=p20230417
 LIBWEBP_SHA=15a91ab179b0b605727d16fb751c12674da9dfec
 LIBYUV_SHA=f9fda6e7
 CCACHE_VERSION=4.7.1
@@ -336,9 +336,9 @@ function build_rav1e {
 
     if [ ! -n "$IS_MACOS" ]; then
         sed -i 's/-lgcc_s/-lgcc_eh/g' "${BUILD_PREFIX}/lib/pkgconfig/rav1e.pc"
-        rm -rf $BUILD_PREFIX/lib/librav1e.so
+        rm -rf $BUILD_PREFIX/lib/librav1e*.so
     else
-        rm -rf $BUILD_PREFIX/lib/librav1e.dylib
+        rm -rf $BUILD_PREFIX/lib/librav1e*.dylib
     fi
 
     group_end
