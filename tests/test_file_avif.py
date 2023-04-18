@@ -736,7 +736,6 @@ else:
 
 
 class TestAvifLeaks(PillowLeakTestCase):
-
     mem_limit = MAX_THREADS * 3 * 1024
     iterations = 100
 

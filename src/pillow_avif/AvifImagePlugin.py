@@ -51,7 +51,6 @@ def _accept(prefix):
 
 
 class AvifImageFile(ImageFile.ImageFile):
-
     format = "AVIF"
     format_description = "AVIF image"
     __loaded = -1
