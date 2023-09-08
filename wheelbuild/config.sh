@@ -4,13 +4,13 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=0.11.0
-AOM_VERSION=3.5.0
-DAV1D_VERSION=1.0.0
-SVT_AV1_VERSION=1.3.0
-RAV1E_VERSION=p20230417
-LIBWEBP_SHA=15a91ab179b0b605727d16fb751c12674da9dfec
-LIBYUV_SHA=f9fda6e7
+LIBAVIF_VERSION=1.0.1
+AOM_VERSION=3.7.0
+DAV1D_VERSION=1.2.1
+SVT_AV1_VERSION=1.7.0
+RAV1E_VERSION=p20230911
+LIBWEBP_SHA=e2c85878f6a33f29948b43d3492d9cdaf801aa54
+LIBYUV_SHA=464c51a0
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
@@ -66,12 +66,26 @@ if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
   exec 2>&1
 fi
 
+function require_package {
+    local pkg=$1
+    local pkgconfig=${PKGCONFIG:-pkg-config}
+    if ! $pkgconfig --exists $pkg; then
+        echo "$pkg failed to build"
+        exit 1
+    fi
+}
+
 function install_ccache {
+    if [[ $(type -P ccache) ]]; then
+        return
+    fi
     mkdir -p $PWD/ccache
     if [ -e /parent-home ]; then
         ln -s $PWD/ccache /parent-home/.ccache
     fi
-    ln -s $PWD/ccache $HOME/.ccache
+    if [ ! -e $HOME/.ccache ]; then
+        ln -s $PWD/ccache $HOME/.ccache
+    fi
 
     group_start "Install ccache"
     if [ -n "$IS_MACOS" ]; then
@@ -104,6 +118,9 @@ function install_ccache {
 }
 
 function install_sccache {
+    if [[ $(type -P sccache) ]]; then
+        return
+    fi
     group_start "Install sccache"
     if [ -n "$IS_MACOS" ]; then
         brew install sccache
@@ -174,10 +191,6 @@ function build_aom {
 
     local cmake_flags=()
 
-    if [ -n "$IS_MACOS" ]; then
-        brew remove --ignore-dependencies aom php imagemagick libavif libheif gd composer
-    fi
-
     fetch_unpack \
         https://storage.googleapis.com/aom-releases/libaom-$AOM_VERSION.tar.gz
 
@@ -205,10 +218,6 @@ function build_aom {
         extra_cmake_flags+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
     fi
 
-    # Fix for https://github.com/AOMediaCodec/libavif/issues/1190
-    (cd libaom-$AOM_VERSION \
-        && patch -p1 -i $CONFIG_DIR/aom-3.5.0-monochrome-realtime-encode.patch)
-
     mkdir libaom-$AOM_VERSION/build/work
     (cd libaom-$AOM_VERSION/build/work \
         && cmake \
@@ -224,6 +233,9 @@ function build_aom {
             "${cmake_flags[@]}" \
             ../.. \
         && make install)
+
+    require_package aom
+
     group_end
     touch aom-stamp
 }
@@ -310,6 +322,8 @@ function build_svt_av1 {
         && make install \
         && cp SvtAv1Enc.pc $BUILD_PREFIX/lib/pkgconfig)
 
+    require_package SvtAv1Enc
+
     group_end
 
     touch svt-av1-stamp
@@ -341,6 +355,8 @@ function build_rav1e {
         rm -rf $BUILD_PREFIX/lib/librav1e*.dylib
     fi
 
+    require_package rav1e
+
     group_end
 }
 
@@ -364,8 +380,24 @@ function build_libsharpyuv {
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_INSTALL_LIBDIR=lib \
              "${cmake_flags[@]}" \
         && ninja sharpyuv)
+
+    if [ -n "$IS_MACOS" ]; then
+        CP="sudo cp"
+        MKDIR="sudo mkdir"
+    else
+        CP="cp"
+        MKDIR="mkdir"
+    fi
+
+    $CP libwebp-$LIBWEBP_SHA/build/libsharpyuv.a $BUILD_PREFIX/lib
+    $CP libwebp-$LIBWEBP_SHA/build/sharpyuv/libsharpyuv.pc $BUILD_PREFIX/lib/pkgconfig
+    $MKDIR -p $BUILD_PREFIX/include/webp/sharpyuv
+    $CP libwebp-$LIBWEBP_SHA/sharpyuv/*.h $BUILD_PREFIX/include/webp/sharpyuv
+
+    require_package libsharpyuv
     group_end
     touch libsharpyuv-stamp
 }
@@ -390,16 +422,30 @@ function build_libyuv {
     fi
     (cd libyuv-$LIBYUV_SHA/build \
         && cmake -G Ninja .. \
-            -DBUILD_SHARED_LIBS=0 \
+            -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_BUILD_TYPE=Release \
             "${cmake_flags[@]}" .. \
         && ninja yuv)
+
+    if [ -n "$IS_MACOS" ]; then
+        CP="sudo cp"
+    else
+        CP="cp"
+    fi
+
+    $CP libyuv-$LIBYUV_SHA/build/libyuv.a $BUILD_PREFIX/lib
+    $CP -a libyuv-$LIBYUV_SHA/include/* $BUILD_PREFIX/include
+
     group_end
     touch libyuv-stamp
 }
 
 function build_libavif {
     LIBAVIF_CMAKE_FLAGS=()
+
+    if [ -n "$IS_MACOS" ]; then
+        brew remove --ignore-dependencies webp jpeg-xl aom composer gd imagemagick libavif libheif php
+    fi
 
     build_aom
     LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_AOM=ON)
@@ -450,12 +496,8 @@ function build_libavif {
     group_end
 
     build_libsharpyuv
-    mv libwebp-$LIBWEBP_SHA libavif-$LIBAVIF_VERSION/ext/libwebp
-    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LOCAL_LIBSHARPYUV=ON)
 
     build_libyuv
-    mv libyuv-$LIBYUV_SHA libavif-$LIBAVIF_VERSION/ext/libyuv
-    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LOCAL_LIBYUV=ON)
 
     group_start "Build libavif"
 
@@ -465,6 +507,7 @@ function build_libavif {
         && cmake .. \
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && make install)
 

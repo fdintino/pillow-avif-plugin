@@ -20,20 +20,12 @@ jobs:
       matrix:
         os: [ "ubuntu-20.04", "macos-11" ]
         python: [ "2.7", "3.7", "3.8", "3.9", "3.10", "3.11" ]
-        platform: [ "x86_64", "i686" ]
-        manylinux-version: [ "1", "2010" ]
+        platform: [ "x86_64" ]
+        manylinux-version: [ "2010" ]
         macos-target: [ "10.10" ]
         mb-ml-libc: [ "manylinux" ]
         multibuild-sha: [ "34e970c4bc448b73af0127615fc4583b4f247369" ]
         exclude:
-          - os: "macos-11"
-            platform: "i686"
-          - os: "macos-11"
-            manylinux-version: "1"
-          - python: "3.10"
-            manylinux-version: "1"
-          - python: "3.11"
-            manylinux-version: "1"
           - python: "3.11"
             manylinux-version: "2010"
           - python: "3.11"
@@ -41,9 +33,6 @@ jobs:
         include:
           - os: "macos-11"
             os-name: "osx"
-          - os: "ubuntu-20.04"
-            manylinux-version: "1"
-            os-name: "manylinux1"
           - os: "ubuntu-20.04"
             manylinux-version: "2010"
             os-name: "manylinux2010"
@@ -136,12 +125,6 @@ jobs:
             os-name: "manylinux2014"
             manylinux-version: "2014"
             multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
-          - python: "3.11"
-            platform: "i686"
-            os: "ubuntu-20.04"
-            os-name: "manylinux2014"
-            manylinux-version: "2014"
-            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
     env:
       BUILD_COMMIT: HEAD
       PLAT: ${{ matrix.platform }}
@@ -222,7 +205,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["2.7", "3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         architecture: ["x64"]
         include:
           - architecture: "x64"
