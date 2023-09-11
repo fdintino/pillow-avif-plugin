@@ -18,7 +18,9 @@ jobs:
           "3.9",
           "3.8",
           "3.7",
+          "2.7",
         ]
+        libavif-version: [ "0.11.0" ]
         include:
         - python-version: "3.7"
           PYTHONOPTIMIZE: 1
@@ -29,17 +31,23 @@ jobs:
           codecov-flag: GHA_Ubuntu
         - os: macos-11
           codecov-flag: GHA_macOS
+        exclude:
+        - python-version: "2.7"
+          os: "macos-11"
 
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} Python ${{ matrix.python-version }}
+    name: ${{ matrix.os }} Python ${{ matrix.python-version }} (libavif ${{ matrix.libavif-version }})
+    container:
+      image: ${{ matrix.python-version == '2.7' && 'python:2.7-buster' || null }}
 
     env:
-      LIBAVIF_VERSION: 0.11.0
+      LIBAVIF_VERSION: ${{ matrix.libavif-version }}
 
     steps:
     - uses: actions/checkout@v3
 
     - name: Set up Python ${{ matrix.python-version }}
+      if: matrix.python-version != '2.7'
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
@@ -74,7 +82,6 @@ jobs:
       if: failure()
       run: |
         mkdir -p tests/errors
-      shell: pwsh
 
     - name: Upload errors
       uses: actions/upload-artifact@v3
@@ -89,9 +96,9 @@ jobs:
         CODECOV_NAME: ${{ matrix.os }} Python ${{ matrix.python-version }}
 
     - name: Upload coverage
-      run: tox -e codecov -- -F ${{ matrix.codecov-flag }}
-      env:
-        CODECOV_NAME: ${{ matrix.os }} Python ${{ matrix.python-version }}
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
 
   msys:
     runs-on: windows-latest
