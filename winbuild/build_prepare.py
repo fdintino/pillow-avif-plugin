@@ -147,9 +147,9 @@ deps = {
         "libs": [r"libpng16.lib"],
     },
     "libavif": {
-        "url": "https://github.com/AOMediaCodec/libavif/archive/v0.11.0.tar.gz",
-        "filename": "libavif-0.11.0.tar.gz",
-        "dir": "libavif-0.11.0",
+        "url": "https://github.com/AOMediaCodec/libavif/archive/v1.0.1.tar.gz",
+        "filename": "libavif-1.0.1.tar.gz",
+        "dir": "libavif-1.0.1",
         "patch": {
             "src/codec_aom.c": {
                 "if (aomCpuUsed >= 7)": "if (0)",
