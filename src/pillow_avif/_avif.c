@@ -13,6 +13,7 @@ typedef struct {
     avifPixelFormat subsampling;
     int qmin;
     int qmax;
+    int quality;
     int speed;
     avifCodecChoice codec;
     avifRange range;
@@ -205,6 +206,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
     char *subsampling = "4:2:0";
     int qmin = AVIF_QUANTIZER_BEST_QUALITY;  // =0
     int qmax = 10;                           // "High Quality", but not lossless
+    int quality = 75;
     int speed = 8;
     PyObject *icc_bytes;
     PyObject *exif_bytes;
@@ -221,12 +223,13 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "IIsiiissiiOOSSSO",
+            "IIsiiiissiiOOSSSO",
             &width,
             &height,
             &subsampling,
             &qmin,
             &qmax,
+            &quality,
             &speed,
             &codec,
             &range,
@@ -256,6 +259,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
 
     enc_options.qmin = normalize_quantize_value(qmin);
     enc_options.qmax = normalize_quantize_value(qmax);
+    enc_options.quality = quality;
 
     if (speed < AVIF_SPEED_SLOWEST) {
         speed = AVIF_SPEED_SLOWEST;
@@ -321,8 +325,12 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
         }
 
         encoder->maxThreads = max_threads;
+#if AVIF_VERSION >= 1000000
+        encoder->quality = enc_options.quality;
+#else
         encoder->minQuantizer = enc_options.qmin;
         encoder->maxQuantizer = enc_options.qmax;
+#endif
         encoder->codecChoice = enc_options.codec;
         encoder->speed = enc_options.speed;
         encoder->timescale = (uint64_t)1000;

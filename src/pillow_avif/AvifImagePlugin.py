@@ -136,7 +136,7 @@ def _save(im, fp, filename, save_all=False):
         # - qmax is 0 for quality=100, then qmax increases linearly relative to
         #   quality decreasing, until it flattens out at quality=37.
         quality = info.get("quality", 75)
-        if not isinstance(quality, int):
+        if not isinstance(quality, int) or quality < 0 or quality > 100:
             raise ValueError("Invalid quality setting")
         qmin = max(0, min(64 - quality, 63))
         qmax = max(0, min(100 - quality, 63))
@@ -186,6 +186,7 @@ def _save(im, fp, filename, save_all=False):
         subsampling,
         qmin,
         qmax,
+        quality,
         speed,
         codec,
         range_,
