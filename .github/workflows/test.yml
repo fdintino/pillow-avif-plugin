@@ -22,6 +22,9 @@ jobs:
         ]
         libavif-version: [ "0.11.0" ]
         include:
+        - python-version: "3.9"
+          os: "ubuntu-20.04"
+          libavif-version: "1.0.1"
         - python-version: "3.7"
           PYTHONOPTIMIZE: 1
         - python-version: "3.8"

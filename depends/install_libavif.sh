@@ -13,6 +13,8 @@ else
     PREFIX=/usr
 fi
 
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
 PKGCONFIG=${PKGCONFIG:-pkg-config}
 
 export CFLAGS="-fPIC -O3 $CFLAGS"
@@ -25,6 +27,10 @@ curl -sLo - \
     | tar --strip-components=1 -C libavif-$LIBAVIF_VERSION -zxf -
 pushd libavif-$LIBAVIF_VERSION
 echo "::endgroup::"
+
+if [ "$LIBAVIF_VERSION" == "1.0.1" ]; then
+    patch -p1 < "${SCRIPT_DIR}/../wheelbuild/libavif-1.0.1-local-static.patch"
+fi
 
 HAS_DECODER=0
 HAS_ENCODER=0

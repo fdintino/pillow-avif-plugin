@@ -380,24 +380,9 @@ function build_libsharpyuv {
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_INSTALL_LIBDIR=lib \
              "${cmake_flags[@]}" \
         && ninja sharpyuv)
 
-    if [ -n "$IS_MACOS" ]; then
-        CP="sudo cp"
-        MKDIR="sudo mkdir"
-    else
-        CP="cp"
-        MKDIR="mkdir"
-    fi
-
-    $CP libwebp-$LIBWEBP_SHA/build/libsharpyuv.a $BUILD_PREFIX/lib
-    $CP libwebp-$LIBWEBP_SHA/build/sharpyuv/libsharpyuv.pc $BUILD_PREFIX/lib/pkgconfig
-    $MKDIR -p $BUILD_PREFIX/include/webp/sharpyuv
-    $CP libwebp-$LIBWEBP_SHA/sharpyuv/*.h $BUILD_PREFIX/include/webp/sharpyuv
-
-    require_package libsharpyuv
     group_end
     touch libsharpyuv-stamp
 }
@@ -424,17 +409,9 @@ function build_libyuv {
         && cmake -G Ninja .. \
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
             "${cmake_flags[@]}" .. \
         && ninja yuv)
-
-    if [ -n "$IS_MACOS" ]; then
-        CP="sudo cp"
-    else
-        CP="cp"
-    fi
-
-    $CP libyuv-$LIBYUV_SHA/build/libyuv.a $BUILD_PREFIX/lib
-    $CP -a libyuv-$LIBYUV_SHA/include/* $BUILD_PREFIX/include
 
     group_end
     touch libyuv-stamp
@@ -495,9 +472,16 @@ function build_libavif {
 
     group_end
 
+    (cd libavif-$LIBAVIF_VERSION \
+            && patch -p1 -i $CONFIG_DIR/libavif-1.0.1-local-static.patch)
+
     build_libsharpyuv
+    mv libwebp-$LIBWEBP_SHA libavif-$LIBAVIF_VERSION/ext/libwebp
+    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LOCAL_LIBSHARPYUV=ON)
 
     build_libyuv
+    mv libyuv-$LIBYUV_SHA libavif-$LIBAVIF_VERSION/ext/libyuv
+    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LOCAL_LIBYUV=ON)
 
     group_start "Build libavif"
 
