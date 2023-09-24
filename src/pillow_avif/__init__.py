@@ -2,4 +2,4 @@ from . import AvifImagePlugin
 
 
 __all__ = ["AvifImagePlugin"]
-__version__ = "1.3.1"
+__version__ = "1.4.0"
