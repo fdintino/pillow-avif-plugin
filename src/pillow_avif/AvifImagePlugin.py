@@ -66,7 +66,10 @@ class AvifImageFile(ImageFile.ImageFile):
         self._size = width, height
         self.n_frames = n_frames
         self.is_animated = self.n_frames > 1
-        self.mode = self.rawmode = mode
+        try:
+            self.mode = self.rawmode = mode
+        except AttributeError:
+            self._mode = self.rawmode = mode
         self.tile = []
 
         if icc:
