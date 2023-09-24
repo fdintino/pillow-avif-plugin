@@ -2,7 +2,8 @@
 
 set -e
 
-brew install dav1d aom rav1e cmake
+brew reinstall cmake
+brew install dav1d aom rav1e
 
 if [ "$GHA_PYTHON_VERSION" == "2.7" ]; then
     python2 -m pip install -U tox tox-gh-actions

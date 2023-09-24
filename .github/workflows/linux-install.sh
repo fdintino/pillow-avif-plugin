@@ -2,6 +2,15 @@
 
 set -eo pipefail
 
+aptget()
+{
+    if [ $(id -u) == 0 ]; then
+        apt-get "$@"
+    else
+        sudo apt-get "$@"
+    fi
+}
+
 aptget_update()
 {
     if [ ! -z $1 ]; then
@@ -9,7 +18,7 @@ aptget_update()
         echo "Retrying apt-get update..."
         echo ""
     fi
-    output=`sudo apt-get update 2>&1`
+    output=`aptget update 2>&1`
     echo "$output"
     if [[ $output == *[WE]:\ * ]]; then
         return 1
@@ -19,11 +28,12 @@ aptget_update || aptget_update retry || aptget_update retry
 
 set -e
 
-sudo apt-get -qq install zlib1g-dev libpng-dev libjpeg-dev \
+aptget -qq install zlib1g-dev libpng-dev libjpeg-dev sudo \
     libxml2-dev libffi-dev libxslt-dev cmake ninja-build nasm
 
 if [ "$GHA_PYTHON_VERSION" == "2.7" ]; then
     python2 -m pip install tox tox-gh-actions
+    aptget install -y python3-pip
 else
     python3 -m pip install 'tox<4' tox-gh-actions
 fi

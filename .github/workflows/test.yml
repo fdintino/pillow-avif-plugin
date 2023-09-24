@@ -20,7 +20,11 @@ jobs:
           "3.7",
           "2.7",
         ]
+        libavif-version: [ "0.11.0" ]
         include:
+        - python-version: "3.9"
+          os: "ubuntu-20.04"
+          libavif-version: "1.0.1"
         - python-version: "3.7"
           PYTHONOPTIMIZE: 1
         - python-version: "3.8"
@@ -30,17 +34,23 @@ jobs:
           codecov-flag: GHA_Ubuntu
         - os: macos-11
           codecov-flag: GHA_macOS
+        exclude:
+        - python-version: "2.7"
+          os: "macos-11"
 
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} Python ${{ matrix.python-version }}
+    name: ${{ matrix.os }} Python ${{ matrix.python-version }} (libavif ${{ matrix.libavif-version }})
+    container:
+      image: ${{ matrix.python-version == '2.7' && 'python:2.7-buster' || null }}
 
     env:
-      LIBAVIF_VERSION: 0.11.0
+      LIBAVIF_VERSION: ${{ matrix.libavif-version }}
 
     steps:
     - uses: actions/checkout@v3
 
     - name: Set up Python ${{ matrix.python-version }}
+      if: matrix.python-version != '2.7'
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
@@ -75,7 +85,6 @@ jobs:
       if: failure()
       run: |
         mkdir -p tests/errors
-      shell: pwsh
 
     - name: Upload errors
       uses: actions/upload-artifact@v3
@@ -90,83 +99,69 @@ jobs:
         CODECOV_NAME: ${{ matrix.os }} Python ${{ matrix.python-version }}
 
     - name: Upload coverage
-      run: tox -e codecov -- -F ${{ matrix.codecov-flag }}
-      env:
-        CODECOV_NAME: ${{ matrix.os }} Python ${{ matrix.python-version }}
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
 
   msys:
-    runs-on: windows-2019
+    runs-on: windows-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        msystem: [ "mingw32", "mingw64" ]
-        python-version: ["2", "3"]
-        include:
-          - msystem: "mingw32"
-            name: "MSYS2 MinGW 32-bit"
-            package: "mingw-w64-i686"
-            env: i686
-          - msystem: "mingw64"
-            name: "MSYS2 MinGW 64-bit"
-            package: "mingw-w64-x86_64"
-            env: x86_64
-        exclude:
-          - msystem: "mingw32"
-            python-version: "2"
-
-    name: ${{ matrix.name }} python ${{ matrix.python-version }}
+    name: MinGW
 
     defaults:
       run:
-        shell: msys2 {0}
+        shell: bash.exe --login -eo pipefail "{0}"
 
     env:
-      MSYSTEM: ${{ matrix.msystem }}
+      MSYSTEM: MINGW64
       CHERE_INVOKING: 1
+      SETUPTOOLS_USE_DISTUTILS: stdlib
 
     timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v3
 
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: ${{ matrix.msystem }}
-          update: true
-          install: >-
-            base-devel
-            git
-            ${{ matrix.package }}-toolchain
-            ${{ matrix.package }}-python${{ matrix.python-version }}-pip
-            ${{ matrix.package }}-python${{ matrix.python-version }}-setuptools
-            ${{ matrix.package }}-libjpeg-turbo
-            ${{ matrix.package }}-libtiff
-            ${{ matrix.package }}-libpng
-            ${{ matrix.package }}-openjpeg2
-            ${{ matrix.package }}-libavif
+      - name: Set up shell
+        run: echo "C:\msys64\usr\bin\" >> $env:GITHUB_PATH
+        shell: pwsh
+
+      - name: Install dependencies
+        run: |
+            pacman -S --noconfirm \
+              base-devel \
+              git \
+              mingw-w64-x86_64-gcc \
+              mingw-w64-x86_64-toolchain \
+              mingw-w64-x86_64-python3-pip \
+              mingw-w64-x86_64-python3-setuptools \
+              mingw-w64-x86_64-libjpeg-turbo \
+              mingw-w64-x86_64-libtiff \
+              mingw-w64-x86_64-libpng \
+              mingw-w64-x86_64-openjpeg2 \
+              mingw-w64-x86_64-zlib \
+              mingw-w64-x86_64-libavif
 
       - name: Install Dependencies
         run: |
-          python${{ matrix.python-version }} -m pip install pytest pytest-cov pillow mock
+            python3 -m pip install pytest pytest-cov pillow mock
 
       - name: Build pillow-avif-plugin
-        run: CFLAGS="-coverage" python${{ matrix.python-version }} setup.py build_ext install
+        run: CFLAGS="-coverage" python3 -m pip install .
 
       - name: Test pillow-avif-plugin
         run: |
-          python${{ matrix.python-version }} -m pytest -vx --cov pillow_avif --cov tests --cov-report term --cov-report xml tests
+          python3 -m pytest -vx --cov pillow_avif --cov tests --cov-report term --cov-report xml tests
 
       - name: Upload coverage
-        run: |
-          python${{ matrix.python-version }} -m pip install codecov
-          bash <(curl -s https://codecov.io/bash) -F GHA_Windows
-        env:
-          CODECOV_NAME: ${{ matrix.name }}
-
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: GHA_Windows
+          name: "MSYS2 MinGW"
   success:
     needs: [build, msys]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     name: Test Successful
     steps:
       - name: Success

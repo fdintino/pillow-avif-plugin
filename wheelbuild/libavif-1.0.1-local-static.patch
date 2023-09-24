@@ -1,0 +1,148 @@
+From f8f4ed7ecec80a596f60a4a7e1392c09cedbf7ed Mon Sep 17 00:00:00 2001
+From: Frankie Dintino <fdintino@gmail.com>
+Date: Tue, 12 Sep 2023 05:47:43 -0400
+Subject: [PATCH] ci: link shared library build against static local
+
+---
+ CMakeLists.txt | 33 +++++++++++++--------------------
+ ext/libyuv.cmd |  2 +-
+ 2 files changed, 14 insertions(+), 21 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1f0cde1..521560e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -78,10 +78,10 @@ endif()
+ 
+ if(BUILD_SHARED_LIBS)
+     set(AVIF_LIBRARY_PREFIX "${CMAKE_SHARED_LIBRARY_PREFIX}")
+-    set(AVIF_LIBRARY_SUFFIX "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+ else()
+     set(AVIF_LIBRARY_PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}")
+-    set(AVIF_LIBRARY_SUFFIX "${CMAKE_STATIC_LIBRARY_SUFFIX}")
++    # This is needed to get shared libraries (e.g. pixbufloader-avif) to compile against a static libavif.
++    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ endif()
+ 
+ set(AVIF_PLATFORM_DEFINITIONS)
+@@ -112,7 +112,7 @@ if(AVIF_LOCAL_ZLIBPNG)
+     set(PREV_ANDROID ${ANDROID})
+     set(ANDROID TRUE)
+     set(PNG_BUILD_ZLIB "${CMAKE_CURRENT_SOURCE_DIR}/ext/zlib" CACHE STRING "" FORCE)
+-    set(PNG_SHARED ${BUILD_SHARED_LIBS} CACHE BOOL "")
++    set(PNG_SHARED OFF CACHE BOOL "")
+     set(PNG_TESTS OFF CACHE BOOL "")
+     add_subdirectory(ext/libpng)
+     set(PNG_PNG_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/libpng")
+@@ -135,7 +135,7 @@ if(AVIF_LOCAL_JPEG)
+ endif()
+ option(AVIF_LOCAL_LIBYUV "Build libyuv by providing your own copy inside the ext subdir." OFF)
+ if(AVIF_LOCAL_LIBYUV)
+-    set(LIB_FILENAME "${CMAKE_CURRENT_SOURCE_DIR}/ext/libyuv/build/${AVIF_LIBRARY_PREFIX}yuv${AVIF_LIBRARY_SUFFIX}")
++    set(LIB_FILENAME "${CMAKE_CURRENT_SOURCE_DIR}/ext/libyuv/build/${AVIF_LIBRARY_PREFIX}yuv${CMAKE_STATIC_LIBRARY_SUFFIX}")
+     if(NOT EXISTS "${LIB_FILENAME}")
+         message(FATAL_ERROR "libavif(AVIF_LOCAL_LIBYUV): ${LIB_FILENAME} is missing, bailing out")
+     endif()
+@@ -146,13 +146,6 @@ if(AVIF_LOCAL_LIBYUV)
+         set(LIBYUV_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/libyuv/include" PARENT_SCOPE)
+         set(LIBYUV_LIBRARY ${LIB_FILENAME} PARENT_SCOPE)
+     endif()
+-    if(BUILD_SHARED_LIBS)
+-        # Fix "libyuv.so: undefined reference to `jpeg_read_raw_data'" errors.
+-        if(NOT AVIF_LOCAL_JPEG)
+-            find_package(JPEG REQUIRED)
+-        endif()
+-        set(LIBYUV_LIBRARY ${LIBYUV_LIBRARY} ${JPEG_LIBRARY})
+-    endif()
+     set(libyuv_FOUND TRUE)
+     message(STATUS "libavif: local libyuv found; libyuv-based fast paths enabled.")
+ else(AVIF_LOCAL_LIBYUV)
+@@ -184,7 +177,7 @@ if(libyuv_FOUND)
+ endif(libyuv_FOUND)
+ option(AVIF_LOCAL_LIBSHARPYUV "Build libsharpyuv by providing your own copy inside the ext subdir." OFF)
+ if(AVIF_LOCAL_LIBSHARPYUV)
+-    set(LIB_FILENAME "${CMAKE_CURRENT_SOURCE_DIR}/ext/libwebp/build/libsharpyuv${AVIF_LIBRARY_SUFFIX}")
++    set(LIB_FILENAME "${CMAKE_CURRENT_SOURCE_DIR}/ext/libwebp/build/libsharpyuv${CMAKE_STATIC_LIBRARY_SUFFIX}")
+     if(NOT EXISTS "${LIB_FILENAME}")
+         message(FATAL_ERROR "libavif(AVIF_LOCAL_LIBSHARPYUV): ${LIB_FILENAME} is missing, bailing out")
+     endif()
+@@ -309,16 +302,16 @@ if(AVIF_CODEC_DAV1D)
+         if(DEFINED ANDROID_ABI)
+             set(AVIF_DAV1D_BUILD_DIR "${AVIF_DAV1D_BUILD_DIR}/${ANDROID_ABI}")
+         endif()
+-        set(LIB_FILENAME "${AVIF_DAV1D_BUILD_DIR}/src/libdav1d${AVIF_LIBRARY_SUFFIX}")
++        set(LIB_FILENAME "${AVIF_DAV1D_BUILD_DIR}/src/libdav1d${CMAKE_STATIC_LIBRARY_SUFFIX}")
+         if(NOT EXISTS "${LIB_FILENAME}")
+-            if("${AVIF_LIBRARY_SUFFIX}" STREQUAL ".a")
++            if("${CMAKE_STATIC_LIBRARY_SUFFIX}" STREQUAL ".a")
+                 message(FATAL_ERROR "libavif: ${LIB_FILENAME} is missing, bailing out")
+             else()
+                 # On windows, meson will produce a libdav1d.a instead of the expected libdav1d.dll/.lib.
+                 # See https://github.com/mesonbuild/meson/issues/8153.
+                 set(LIB_FILENAME "${CMAKE_CURRENT_SOURCE_DIR}/ext/dav1d/build/src/libdav1d.a")
+                 if(NOT EXISTS "${LIB_FILENAME}")
+-                    message(FATAL_ERROR "libavif: ${LIB_FILENAME} (or libdav1d${AVIF_LIBRARY_SUFFIX}) is missing, bailing out")
++                    message(FATAL_ERROR "libavif: ${LIB_FILENAME} (or libdav1d${CMAKE_STATIC_LIBRARY_SUFFIX}) is missing, bailing out")
+                 endif()
+             endif()
+         endif()
+@@ -353,7 +346,7 @@ if(AVIF_CODEC_LIBGAV1)
+         if(DEFINED ANDROID_ABI)
+             set(AVIF_LIBGAV1_BUILD_DIR "${AVIF_LIBGAV1_BUILD_DIR}/${ANDROID_ABI}")
+         endif()
+-        set(LIB_FILENAME "${AVIF_LIBGAV1_BUILD_DIR}/libgav1${AVIF_LIBRARY_SUFFIX}")
++        set(LIB_FILENAME "${AVIF_LIBGAV1_BUILD_DIR}/libgav1${CMAKE_STATIC_LIBRARY_SUFFIX}")
+         if(NOT EXISTS "${LIB_FILENAME}")
+             message(FATAL_ERROR "libavif: ${LIB_FILENAME} is missing, bailing out")
+         endif()
+@@ -378,7 +371,7 @@ if(AVIF_CODEC_RAV1E)
+ 
+     if(AVIF_LOCAL_RAV1E)
+         set(LIB_FILENAME
+-            "${CMAKE_CURRENT_SOURCE_DIR}/ext/rav1e/build.libavif/usr/lib/${AVIF_LIBRARY_PREFIX}rav1e${AVIF_LIBRARY_SUFFIX}"
++            "${CMAKE_CURRENT_SOURCE_DIR}/ext/rav1e/build.libavif/usr/lib/${AVIF_LIBRARY_PREFIX}rav1e${CMAKE_STATIC_LIBRARY_SUFFIX}"
+         )
+         if(NOT EXISTS "${LIB_FILENAME}")
+             message(FATAL_ERROR "libavif: compiled rav1e library is missing (in ext/rav1e/build.libavif/usr/lib), bailing out")
+@@ -411,7 +404,7 @@ if(AVIF_CODEC_SVT)
+ 
+     if(AVIF_LOCAL_SVT)
+         set(LIB_FILENAME
+-            "${CMAKE_CURRENT_SOURCE_DIR}/ext/SVT-AV1/Bin/Release/${AVIF_LIBRARY_PREFIX}SvtAv1Enc${AVIF_LIBRARY_SUFFIX}"
++            "${CMAKE_CURRENT_SOURCE_DIR}/ext/SVT-AV1/Bin/Release/${AVIF_LIBRARY_PREFIX}SvtAv1Enc${CMAKE_STATIC_LIBRARY_SUFFIX}"
+         )
+         if(NOT EXISTS "${LIB_FILENAME}")
+             message(FATAL_ERROR "libavif: compiled svt library is missing (in ext/SVT-AV1/Bin/Release), bailing out")
+@@ -450,7 +443,7 @@ if(AVIF_CODEC_AOM)
+     endif()
+     set(AVIF_SRCS ${AVIF_SRCS} src/codec_aom.c)
+     if(AVIF_LOCAL_AOM)
+-        set(LIB_FILENAME "${CMAKE_CURRENT_SOURCE_DIR}/ext/aom/build.libavif/${AVIF_LIBRARY_PREFIX}aom${AVIF_LIBRARY_SUFFIX}")
++        set(LIB_FILENAME "${CMAKE_CURRENT_SOURCE_DIR}/ext/aom/build.libavif/${AVIF_LIBRARY_PREFIX}aom${CMAKE_STATIC_LIBRARY_SUFFIX}")
+         if(NOT EXISTS "${LIB_FILENAME}")
+             message(FATAL_ERROR "libavif: ${LIB_FILENAME} is missing, bailing out")
+         endif()
+@@ -482,7 +475,7 @@ if(AVIF_CODEC_AVM)
+     set(AVIF_SRCS ${AVIF_SRCS} src/codec_avm.c)
+     if(AVIF_LOCAL_AVM)
+         # Building the avm repository generates files such as "libaom.a" because it is a fork of aom.
+-        set(LIB_FILENAME "${CMAKE_CURRENT_SOURCE_DIR}/ext/avm/build.libavif/${AVIF_LIBRARY_PREFIX}aom${AVIF_LIBRARY_SUFFIX}")
++        set(LIB_FILENAME "${CMAKE_CURRENT_SOURCE_DIR}/ext/avm/build.libavif/${AVIF_LIBRARY_PREFIX}aom${CMAKE_STATIC_LIBRARY_SUFFIX}")
+         if(NOT EXISTS "${LIB_FILENAME}")
+             message(FATAL_ERROR "libavif: ${LIB_FILENAME} (from avm) is missing, bailing out")
+         endif()
+diff --git a/ext/libyuv.cmd b/ext/libyuv.cmd
+index c959777..1186156 100755
+--- a/ext/libyuv.cmd
++++ b/ext/libyuv.cmd
+@@ -22,6 +22,6 @@ git checkout 464c51a0
+ mkdir build
+ cd build
+ 
+-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
++cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_SHARED_LIBS=OFF ..
+ ninja yuv
+ cd ../..
+-- 
+2.30.0
+
