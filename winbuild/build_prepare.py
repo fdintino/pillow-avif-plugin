@@ -526,6 +526,14 @@ if __name__ == "__main__":
         ),
         help="build architecture (default: same as host Python)",
     )
+    parser.add_argument(
+        "--nmake",
+        dest="cmake_generator",
+        action="store_const",
+        const="NMake Makefiles",
+        default="Ninja",
+        help="build dependencies using NMake instead of Ninja",
+    )
     args = parser.parse_args()
 
     arch_prefs = ARCHITECTURES[args.architecture]
