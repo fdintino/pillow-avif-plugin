@@ -165,7 +165,10 @@ DEPS = {
         "libs": [r"libpng16.lib"],
     },
     "rav1e": {
-        "url": "https://github.com/xiph/rav1e/releases/download/v0.6.6/rav1e-0.6.6-windows-msvc-generic.zip",
+        "url": (
+            "https://github.com/xiph/rav1e/releases/download/v0.6.6/"
+            "rav1e-0.6.6-windows-msvc-generic.zip"
+        ),
         "filename": "rav1e-0.6.6-windows-msvc-generic.zip",
         "dir": "rav1e-windows-msvc-sdk",
         "license": [],
@@ -182,9 +185,9 @@ DEPS = {
         },
         "license": "LICENSE",
         "build": [
-            cmd_cd("ext"),
-            cmd_mkdir(r"rav1e\rav1e\build.libavif\usr"),
+            cmd_mkdir(r"ext\rav1e\rav1e\build.libavif"),
             cmd_xcopy(r"..\rav1e-windows-msvc-sdk", r"rav1e\rav1e\build.libavif\usr"),
+            cmd_cd("ext"),
             # cmd_rmdir("aom"),
             # 'cmd.exe /c "aom.cmd"',
             cmd_rmdir("dav1d"),
