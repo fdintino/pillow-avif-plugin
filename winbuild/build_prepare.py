@@ -559,10 +559,6 @@ if __name__ == "__main__":
         os.makedirs(path, exist_ok=True)
 
     disabled = []
-    if args.no_imagequant:
-        disabled += ["libimagequant"]
-    if args.no_fribidi:
-        disabled += ["fribidi"]
 
     prefs = {
         "architecture": args.architecture,
