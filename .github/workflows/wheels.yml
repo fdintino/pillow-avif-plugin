@@ -294,6 +294,10 @@ jobs:
       run: python -m pip install meson
       shell: cmd
 
+    - name: Build dependencies / rav1e
+      if: steps.build-cache.outputs.cache-hit != 'true'
+      run: "& winbuild\\build\\build_dep_rav1e.cmd"
+
     - name: Build dependencies / libavif
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: "& winbuild\\build\\build_dep_libavif.cmd"
