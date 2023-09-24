@@ -202,12 +202,12 @@ jobs:
     - name: Install dependencies
       id: install
       run: |
-        7z x winbuild\depends\nasm-2.14.02-win64.zip "-o$env:RUNNER_WORKSPACE\"
-        echo "$env:RUNNER_WORKSPACE\nasm-2.14.02" >> $env:GITHUB_PATH
+        7z x winbuild\depends\nasm-2.16.01-win64.zip "-o$env:RUNNER_WORKSPACE\"
+        echo "$env:RUNNER_WORKSPACE\nasm-2.16.01" >> $env:GITHUB_PATH
 
-        winbuild\depends\gs9533w32.exe /S
-        echo "C:\Program Files (x86)\gs\gs9.53.3\bin" >> $env:GITHUB_PATH
+        python -m pip install meson
 
+        # make cache key depend on VS version
         & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" `
           | find """catalog_buildVersion""" `
           | ForEach-Object { $a = $_.split(" ")[1]; echo "vs=$a" >> $env:GITHUB_OUTPUT }
@@ -224,7 +224,7 @@ jobs:
     - name: Prepare build
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: |
-        & python.exe winbuild\build_prepare.py -v --python=$env:pythonLocation --srcdir
+        & python.exe winbuild\build_prepare.py -v
       shell: pwsh
 
     - name: Build dependencies / libjpeg-turbo
@@ -248,12 +248,13 @@ jobs:
       run: python -m pip install meson
       shell: cmd
 
+    - name: Build dependencies / rav1e
+      if: steps.build-cache.outputs.cache-hit != 'true'
+      run: "& winbuild\\build\\build_dep_rav1e.cmd"
+
     - name: Build dependencies / libavif
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: "& winbuild\\build\\build_dep_libavif.cmd"
-
-    - name: Install dependencies / Pillow
-      run: "& winbuild\\build\\install_pillow.cmd"
 
     # trim ~150MB x 9
     - name: Optimize build cache
@@ -261,8 +262,14 @@ jobs:
       run: rmdir /S /Q winbuild\build\src
       shell: cmd
 
+    - name: Install dependencies / Pillow
+      run: |
+        cmd /c "winbuild\build\build_env.cmd && $env:pythonLocation\python.exe -m pip install -v Pillow"
+      shell: pwsh
+
     - name: Build pillow-avif-plugin
-      run: "& winbuild\\build\\build_pillow_avif_plugin.cmd install"
+      run: |
+        cmd /c "winbuild\build\build_env.cmd && $env:pythonLocation\python.exe setup.py build_ext install"
       shell: pwsh
 
     # failing with PyPy3
@@ -305,15 +312,14 @@ jobs:
       id: wheel
       if: "github.event_name == 'push'"
       run: |
-        for /f "tokens=3 delims=/" %%a in ("${{ github.ref }}") do echo dist=dist-%%a >> %GITHUB_OUTPUT%
-        winbuild\\build\\build_pillow_avif_plugin.cmd bdist_wheel
-      shell: cmd
+        cmd /c "winbuild\build\build_env.cmd && $env:pythonLocation\python.exe -m pip wheel -v ."
+      shell: pwsh
 
     - uses: actions/upload-artifact@v3
       if: "github.event_name == 'push'"
       with:
         name: wheels
-        path: dist\*.whl
+        path: "*.whl"
 
   success:
     needs: [build, windows]

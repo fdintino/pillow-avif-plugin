@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=1.0.1
+LIBAVIF_VERSION=9575bb2a32346694b9b346652d6ea2c398e80721
 AOM_VERSION=3.7.0
 DAV1D_VERSION=1.2.1
 SVT_AV1_VERSION=1.7.0
@@ -22,6 +22,11 @@ alias trace_on='{ set -x; } 2>/dev/null'
 alias trace_off='{ set +x; } 2>/dev/null'
 alias trace_suppress='{ [[ $- =~ .*x.* ]] && trace_enabled=1 || trace_enabled=0; set +x; } 2>/dev/null'
 alias trace_restore='{ [ $trace_enabled -eq 1 ] && trace_on || trace_off; } 2>/dev/null'
+
+if [ -n "$IS_MACOS" ] && [ -n "$MACOSX_DEPLOYMENT_TARGET" ]; then
+    CFLAGS="${CFLAGS} -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
+    LDFLAGS="${LDFLAGS} -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
+fi
 
 call_and_restore_trace() {
     local rc
@@ -222,6 +227,7 @@ function build_aom {
     (cd libaom-$AOM_VERSION/build/work \
         && cmake \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCONFIG_PIC=1 \
             -DCMAKE_INSTALL_PREFIX="${BUILD_PREFIX}" \
             -DCMAKE_INSTALL_LIBDIR=lib \
             -DBUILD_SHARED_LIBS=0 \
@@ -467,13 +473,10 @@ function build_libavif {
     group_start "Download libavif source"
 
     fetch_unpack \
-        "https://github.com/AOMediaCodec/libavif/archive/v$LIBAVIF_VERSION.tar.gz" \
+        "https://github.com/fdintino/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
         "libavif-$LIBAVIF_VERSION.tar.gz"
 
     group_end
-
-    (cd libavif-$LIBAVIF_VERSION \
-            && patch -p1 -i $CONFIG_DIR/libavif-1.0.1-local-static.patch)
 
     build_libsharpyuv
     mv libwebp-$LIBWEBP_SHA libavif-$LIBAVIF_VERSION/ext/libwebp
@@ -489,11 +492,12 @@ function build_libavif {
 
     (cd libavif-$LIBAVIF_VERSION/build \
         && cmake .. \
+            -G "Ninja" \
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
+            -DBUILD_SHARED_LIBS=OFF \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
-        && make install)
+        && ninja -v install/strip)
 
     group_end
 }
