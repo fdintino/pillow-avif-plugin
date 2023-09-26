@@ -115,17 +115,20 @@ jobs:
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: "& winbuild\\build\\build_dep_libavif.cmd"
 
-    - name: Install dependencies / Pillow
-      run: "& winbuild\\build\\install_pillow.cmd"
-
     # trim ~150MB x 9
     - name: Optimize build cache
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: rmdir /S /Q winbuild\build\src
       shell: cmd
 
+    - name: Install dependencies / Pillow
+      run: |
+        cmd /c "winbuild\build\build_env.cmd && $env:pythonLocation\python.exe -m pip install -v Pillow"
+      shell: pwsh
+
     - name: Build pillow-avif-plugin
-      run: "& winbuild\\build\\build_pillow_avif_plugin.cmd install"
+      run: |
+        cmd /c "winbuild\build\build_env.cmd && $env:pythonLocation\python.exe setup.py build_ext install"
       shell: pwsh
 
     # failing with PyPy3

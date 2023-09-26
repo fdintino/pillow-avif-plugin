@@ -441,16 +441,6 @@ def build_dep_all() -> None:
     write_script("build_dep_all.cmd", lines)
 
 
-def install_pillow():
-    lines = [
-        "@echo on",
-        "@echo ---- Installing pillow ----",
-        r'"{python_dir}\{python_exe}" -m pip install Pillow',
-        "@echo Pillow installed successfully",
-    ]
-    write_script("install_pillow.cmd", lines)
-
-
 def install_meson():
     msi_url = "https://github.com/mesonbuild/meson/releases/download/0.56.2/meson-0.56.2-64.msi"  # noqa: E501
     msi_file = os.path.join(args.depends_dir, "meson-0.56.2-64.msi")
@@ -463,24 +453,6 @@ def install_meson():
         "@echo meson installed successfully",
     ]
     write_script("install_meson.cmd", lines)
-
-
-def build_pillow_avif_plugin():
-    lines = (
-        [
-            "@echo ---- Building pillow-avif-plugin (build_ext %*) ----",
-            cmd_cd("{pillow_avif_plugin_dir}"),
-        ]
-        + prefs["header"]
-        + [
-            cmd_set("DISTUTILS_USE_SDK", "1"),  # use same compiler to build pillow-avif
-            cmd_set("MSSdk", "1"),  # for PyPy3.6
-            cmd_set("py_vcruntime_redist", "true"),  # use /MD, not /MT
-            r'"{python_dir}\{python_exe}" setup.py build_ext %*',
-        ]
-    )
-
-    write_script("build_pillow_avif_plugin.cmd", lines)
 
 
 if __name__ == "__main__":
@@ -599,7 +571,5 @@ if __name__ == "__main__":
 
     write_script(".gitignore", ["*"])
     build_env()
-    build_dep_all()
-    install_pillow()
     install_meson()
-    build_pillow_avif_plugin()
+    build_dep_all()
