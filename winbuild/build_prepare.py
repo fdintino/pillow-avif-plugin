@@ -392,10 +392,11 @@ def build_dep(name: str) -> str:
     if "license_pattern" in dep:
         match = re.search(dep["license_pattern"], license_text, re.DOTALL)
         license_text = "\n".join(match.groups())
-    assert len(license_text) > 50
-    with open(os.path.join(license_dir, f"{dir}.txt"), "w") as f:
-        print(f"Writing license {dir}.txt")
-        f.write(license_text)
+    if licenses:
+        assert len(license_text) > 50
+        with open(os.path.join(license_dir, f"{dir}.txt"), "w") as f:
+            print(f"Writing license {dir}.txt")
+            f.write(license_text)
 
     for patch_file, patch_list in dep.get("patch", {}).items():
         patch_file = os.path.join(sources_dir, dir, patch_file.format(**prefs))
