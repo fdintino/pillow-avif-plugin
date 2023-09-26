@@ -185,8 +185,10 @@ DEPS = {
         },
         "license": "LICENSE",
         "build": [
-            cmd_mkdir(r"ext\rav1e\rav1e\build.libavif"),
-            cmd_xcopy(r"..\rav1e-windows-msvc-sdk", r"ext\rav1e\rav1e\build.libavif\usr"),
+            cmd_mkdir(r"ext\rav1e\rav1e\build.libavif\usr"),
+            cmd_xcopy(
+                r"..\rav1e-windows-msvc-sdk", r"ext\rav1e\rav1e\build.libavif\usr"
+            ),
             cmd_cd("ext"),
             # cmd_rmdir("aom"),
             # 'cmd.exe /c "aom.cmd"',
