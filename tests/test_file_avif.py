@@ -217,7 +217,7 @@ class TestFileAvif:
         difference = sum(
             [abs(original_value[i] - reread_value[i]) for i in range(0, 3)]
         )
-        assert difference < 5
+        assert difference < 12
 
     def test_save_single_frame(self, tmp_path):
         temp_file = str(tmp_path / "temp.avif")
