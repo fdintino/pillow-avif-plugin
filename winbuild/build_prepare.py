@@ -175,47 +175,32 @@ DEPS = {
         "build": [],
     },
     "libavif": {
-        "url": "https://github.com/AOMediaCodec/libavif/archive/v1.0.1.zip",
-        "filename": "libavif-1.0.1.zip",
-        "dir": "libavif-1.0.1",
-        "patch": {
-            "src/codec_aom.c": {
-                "if (aomCpuUsed >= 7)": "if (0)",
-            },
-        },
+        "url": (
+            "https://github.com/fdintino/libavif/archive/"
+            "217e76487e7ca81057e8de1d3a2ab095e1c4fcb1.zip"
+        ),
+        "filename": "libavif-217e76487e7ca81057e8de1d3a2ab095e1c4fcb1.zip",
+        "dir": "libavif-217e76487e7ca81057e8de1d3a2ab095e1c4fcb1",
         "license": "LICENSE",
         "build": [
-            cmd_mkdir(r"ext\rav1e\rav1e\build.libavif\usr"),
-            cmd_xcopy(
-                r"..\rav1e-windows-msvc-sdk", r"ext\rav1e\rav1e\build.libavif\usr"
-            ),
+            cmd_mkdir(r"ext\rav1e\build.libavif\usr"),
+            cmd_xcopy(r"..\rav1e-windows-msvc-sdk", r"ext\rav1e\build.libavif\usr"),
             cmd_cd("ext"),
-            # cmd_rmdir("aom"),
-            # 'cmd.exe /c "aom.cmd"',
             cmd_rmdir("dav1d"),
             'cmd.exe /c "dav1d.cmd"',
+            cmd_rmdir("libyuv"),
+            'cmd.exe /c "libyuv.cmd"',
             cmd_cd(".."),
             *cmds_cmake(
                 "avif",
                 "-DBUILD_SHARED_LIBS=OFF",
+                "-DAVIF_LOCAL_LIBYUV=ON",
                 "-DAVIF_CODEC_RAV1E=ON",
                 "-DAVIF_LOCAL_RAV1E=ON",
-                # "-DAVIF_CODEC_AOM=ON",
-                # "-DAVIF_LOCAL_AOM=ON",
                 "-DAVIF_CODEC_DAV1D=ON",
                 "-DAVIF_LOCAL_DAV1D=ON",
             ),
-            cmd_nmake(),
-            cmd_lib_combine(
-                r"avif_combined.lib",
-                r"avif.lib",
-                r"ext\rav1e\rav1e\build.libavif\usr\lib\rav1e.lib",
-                # r"ext\aom\build.libavif\aom.lib",
-                r"ext\dav1d\build\src\libdav1d.a",
-            ),
-            cmd_copy(r"avif_combined.lib", r"avif.lib"),
-            cmd_mkdir(r"{inc_dir}\avif"),
-            cmd_copy(r"include\avif\avif.h", r"{inc_dir}\avif"),
+            cmd_xcopy("include", "{inc_dir}"),
         ],
         "libs": [r"avif.lib"],
     },
