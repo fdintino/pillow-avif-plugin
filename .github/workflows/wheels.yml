@@ -13,125 +13,79 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.python }} ${{ matrix.os-name }} ${{ matrix.platform }}
+    name: ${{ matrix.python }} ${{ matrix.os-name }} ${{ matrix.arch == 'x86' && 'x86_64' || matrix.os == 'macos-11' && 'arm64' || 'aarch64' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ "ubuntu-20.04", "macos-11" ]
-        python: [ "2.7", "3.7", "3.8", "3.9", "3.10", "3.11" ]
-        platform: [ "x86_64" ]
-        manylinux-version: [ "2010" ]
-        macos-target: [ "10.10" ]
+        python: [ "2.7", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12" ]
+        arch: [ "x86", "arm" ]
+        manylinux-version: [ "2014" ]
         mb-ml-libc: [ "manylinux" ]
-        multibuild-sha: [ "34e970c4bc448b73af0127615fc4583b4f247369" ]
         exclude:
-          - python: "3.11"
-            manylinux-version: "2010"
-          - python: "3.11"
-            multibuild-sha: "34e970c4bc448b73af0127615fc4583b4f247369"
+          - python: "2.7"
+            os: "ubuntu-20.04"
+            manylinux-version: "2014"
+          - python: "3.7"
+            os: "ubuntu-20.04"
+            manylinux-version: "2014"
+          - python: "2.7"
+            os: "ubuntu-20.04"
+            arch: "arm"
         include:
-          - os: "macos-11"
-            os-name: "osx"
           - os: "ubuntu-20.04"
+            python: "2.7"
+            arch: "x86"
+            manylinux-version: "2010"
+            os-name: "manylinux2010"
+          - os: "ubuntu-20.04"
+            python: "3.7"
+            arch: "x86"
             manylinux-version: "2010"
             os-name: "manylinux2010"
           - os: "macos-11"
             os-name: "osx"
-            platform: "arm64"
-            python: "3.10"
-            macos-target: "11.0"
-          - os: "macos-11"
-            os-name: "osx"
-            platform: "arm64"
-            python: "3.9"
-            macos-target: "11.0"
-          - os: "macos-11"
-            os-name: "osx"
-            platform: "arm64"
-            python: "3.8"
-            macos-target: "11.0"
-          - os: "macos-11"
-            os-name: "osx"
-            platform: "arm64"
-            python: "3.7"
-            macos-target: "11.0"
-          - os: "macos-11"
-            os-name: "osx"
-            platform: "arm64"
-            python: "2.7"
-            macos-target: "11.0"
+          - os: "ubuntu-20.04"
+            manylinux-version: "2014"
+            os-name: "manylinux2014"
           - python: "3.8"
-            platform: "x86_64"
+            arch: "x86"
             mb-ml-libc: "musllinux"
             os: "ubuntu-20.04"
             os-name: "musllinux"
-            manylinux-version: ""
+            manylinux-version: "_1_1"
           - python: "3.9"
-            platform: "x86_64"
+            arch: "x86"
             mb-ml-libc: "musllinux"
             os: "ubuntu-20.04"
             os-name: "musllinux"
-            manylinux-version: ""
+            manylinux-version: "_1_1"
           - python: "3.10"
-            platform: "x86_64"
+            arch: "x86"
             mb-ml-libc: "musllinux"
             os: "ubuntu-20.04"
             os-name: "musllinux"
-            manylinux-version: ""
-          - python: "3.8"
-            platform: "aarch64"
-            os: "ubuntu-20.04"
-            os-name: "manylinux2014"
-            manylinux-version: "2014"
-          - python: "3.9"
-            platform: "aarch64"
-            os: "ubuntu-20.04"
-            os-name: "manylinux2014"
-            manylinux-version: "2014"
-          - python: "3.10"
-            platform: "aarch64"
-            os: "ubuntu-20.04"
-            os-name: "manylinux2014"
-            manylinux-version: "2014"
+            manylinux-version: "_1_1"
           - python: "3.11"
-            platform: "x86_64"
-            os: "macos-11"
-            os-name: "osx"
-            macos-target: "10.10"
-            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
-          - python: "3.11"
-            platform: "arm64"
-            os: "macos-11"
-            os-name: "osx"
-            macos-target: "11.0"
-            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
-          - python: "3.11"
-            platform: "x86_64"
+            arch: "x86"
             mb-ml-libc: "musllinux"
             os: "ubuntu-20.04"
             os-name: "musllinux"
-            manylinux-version: ""
-            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
-          - python: "3.11"
-            platform: "aarch64"
+            manylinux-version: "_1_1"
+          - python: "3.12"
+            arch: "x86"
+            mb-ml-libc: "musllinux"
             os: "ubuntu-20.04"
-            os-name: "manylinux2014"
-            manylinux-version: "2014"
-            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
-          - python: "3.11"
-            platform: "x86_64"
-            os: "ubuntu-20.04"
-            os-name: "manylinux2014"
-            manylinux-version: "2014"
-            multibuild-sha: "bb32cfec4f755cb146332a0490abcf3187ce61d1"
+            os-name: "musllinux"
+            manylinux-version: "_1_1"
     env:
       BUILD_COMMIT: HEAD
-      PLAT: ${{ matrix.platform }}
+      PLAT: ${{ matrix.arch == 'x86' && 'x86_64' || matrix.os == 'macos-11' && 'arm64' || 'aarch64' }}
       MB_PYTHON_VERSION: ${{ matrix.python }}
       TRAVIS_OS_NAME: ${{ matrix.os-name }}
       MB_ML_VER: ${{ matrix.manylinux-version }}
-      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos-target }}
+      MACOSX_DEPLOYMENT_TARGET: ${{ matrix.arch == 'arm' && '11.0' || '10.10' }}
       MB_ML_LIBC: ${{ matrix.mb-ml-libc }}
     steps:
       - uses: actions/checkout@v3
@@ -149,7 +103,7 @@ jobs:
         with:
           repository: multi-build/multibuild
           path: multibuild
-          ref: ${{ matrix.multibuild-sha }}
+          ref: ${{ (matrix.python == '3.11' || matrix.python == '3.12') && '452dd2d1705f6b2375369a6570c415beb3163f70' || '34e970c4bc448b73af0127615fc4583b4f247369' }}
 
       - uses: actions/setup-python@v4
         with:
@@ -157,7 +111,7 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
-        if: ${{ matrix.platform == 'aarch64' }}
+        if: ${{ matrix.os == 'ubuntu-20.04' && matrix.arch == 'arm' }}
 
       - name: Setup env_vars
         run: |
@@ -172,7 +126,7 @@ jobs:
         with:
           path: pillow-avif-plugin/depends/libavif-${{ env.LIBAVIF_VERSION }}
           key:
-            ${{ env.LIBAVIF_VERSION }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*') }}-${{ matrix.os }}-${{ matrix.platform }}
+            ${{ env.LIBAVIF_VERSION }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*') }}-${{ matrix.os }}-${{ env.PLAT }}
 
       - name: Cache ccache/sccache
         uses: actions/cache@v3
@@ -181,11 +135,11 @@ jobs:
             ccache
             sccache
           key:
-            cache-${{ matrix.os }}-${{ matrix.os-name }}-${{ matrix.platform }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*', 'pillow-avif-plugin/**/*.py', 'pillow-avif-plugin/**/*.c') }}-${{ matrix.python }}
+            cache-${{ matrix.os }}-${{ matrix.os-name }}-${{ env.PLAT }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*', 'pillow-avif-plugin/**/*.py', 'pillow-avif-plugin/**/*.c') }}-${{ matrix.python }}
           restore-keys: |
-            cache-${{ matrix.os }}-${{ matrix.os-name }}-${{ matrix.platform }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*', 'pillow-avif-plugin/**/*.py', 'pillow-avif-plugin/**/*.c') }}-${{ matrix.python }}
-            cache-${{ matrix.os }}-${{ matrix.os-name }}-${{ matrix.platform }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*', 'pillow-avif-plugin/**/*.py', 'pillow-avif-plugin/**/*.c') }}
-            cache-${{ matrix.os }}-${{ matrix.os-name }}-${{ matrix.platform }}-
+            cache-${{ matrix.os }}-${{ matrix.os-name }}-${{ env.PLAT }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*', 'pillow-avif-plugin/**/*.py', 'pillow-avif-plugin/**/*.c') }}-${{ matrix.python }}
+            cache-${{ matrix.os }}-${{ matrix.os-name }}-${{ env.PLAT }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*', 'pillow-avif-plugin/**/*.py', 'pillow-avif-plugin/**/*.c') }}
+            cache-${{ matrix.os }}-${{ matrix.os-name }}-${{ env.PLAT }}-
 
       - name: Build Wheel
         run: pillow-avif-plugin/wheelbuild/build.sh
