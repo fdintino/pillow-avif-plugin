@@ -4,11 +4,11 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=1.0.1
+LIBAVIF_VERSION=ee29bec775ab8e6d555f602775301c14302b96e7
 AOM_VERSION=3.7.0
 DAV1D_VERSION=1.2.1
 SVT_AV1_VERSION=1.7.0
-RAV1E_VERSION=p20230911
+RAV1E_VERSION=p20231003
 LIBWEBP_SHA=e2c85878f6a33f29948b43d3492d9cdaf801aa54
 LIBYUV_SHA=464c51a0
 CCACHE_VERSION=4.7.1
@@ -22,6 +22,11 @@ alias trace_on='{ set -x; } 2>/dev/null'
 alias trace_off='{ set +x; } 2>/dev/null'
 alias trace_suppress='{ [[ $- =~ .*x.* ]] && trace_enabled=1 || trace_enabled=0; set +x; } 2>/dev/null'
 alias trace_restore='{ [ $trace_enabled -eq 1 ] && trace_on || trace_off; } 2>/dev/null'
+
+if [ -n "$IS_MACOS" ] && [ -n "$MACOSX_DEPLOYMENT_TARGET" ]; then
+    CFLAGS="${CFLAGS} -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
+    LDFLAGS="${LDFLAGS} -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
+fi
 
 call_and_restore_trace() {
     local rc
@@ -222,6 +227,7 @@ function build_aom {
     (cd libaom-$AOM_VERSION/build/work \
         && cmake \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCONFIG_PIC=1 \
             -DCMAKE_INSTALL_PREFIX="${BUILD_PREFIX}" \
             -DCMAKE_INSTALL_LIBDIR=lib \
             -DBUILD_SHARED_LIBS=0 \
@@ -345,8 +351,8 @@ function build_rav1e {
     fi
 
     curl -sLo - \
-        https://github.com/fdintino/rav1e/releases/download/$RAV1E_VERSION/$librav1e_tgz \
-        | tar -C $BUILD_PREFIX -zxf -
+        https://github.com/xiph/rav1e/releases/download/$RAV1E_VERSION/$librav1e_tgz \
+        | tar -C $BUILD_PREFIX --exclude LICENSE -zxf -
 
     if [ ! -n "$IS_MACOS" ]; then
         sed -i 's/-lgcc_s/-lgcc_eh/g' "${BUILD_PREFIX}/lib/pkgconfig/rav1e.pc"
@@ -467,13 +473,10 @@ function build_libavif {
     group_start "Download libavif source"
 
     fetch_unpack \
-        "https://github.com/AOMediaCodec/libavif/archive/v$LIBAVIF_VERSION.tar.gz" \
+        "https://github.com/AOMediaCodec/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
         "libavif-$LIBAVIF_VERSION.tar.gz"
 
     group_end
-
-    (cd libavif-$LIBAVIF_VERSION \
-            && patch -p1 -i $CONFIG_DIR/libavif-1.0.1-local-static.patch)
 
     build_libsharpyuv
     mv libwebp-$LIBWEBP_SHA libavif-$LIBAVIF_VERSION/ext/libwebp
@@ -489,11 +492,12 @@ function build_libavif {
 
     (cd libavif-$LIBAVIF_VERSION/build \
         && cmake .. \
+            -G "Ninja" \
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
+            -DBUILD_SHARED_LIBS=OFF \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
-        && make install)
+        && ninja -v install/strip)
 
     group_end
 }
