@@ -9,7 +9,7 @@ env:
   MACOSX_DEPLOYMENT_TARGET: "10.10"
   WHEEL_SDIR: wheelhouse
   CONFIG_PATH: pillow-avif-plugin/wheelbuild/config.sh
-  LIBAVIF_VERSION: 9575bb2a32346694b9b346652d6ea2c398e80721
+  LIBAVIF_VERSION: ee29bec775ab8e6d555f602775301c14302b96e7
 
 jobs:
   build:

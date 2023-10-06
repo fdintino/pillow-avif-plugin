@@ -4,11 +4,11 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=9575bb2a32346694b9b346652d6ea2c398e80721
+LIBAVIF_VERSION=ee29bec775ab8e6d555f602775301c14302b96e7
 AOM_VERSION=3.7.0
 DAV1D_VERSION=1.2.1
 SVT_AV1_VERSION=1.7.0
-RAV1E_VERSION=p20230911
+RAV1E_VERSION=p20231003
 LIBWEBP_SHA=e2c85878f6a33f29948b43d3492d9cdaf801aa54
 LIBYUV_SHA=464c51a0
 CCACHE_VERSION=4.7.1
@@ -351,8 +351,8 @@ function build_rav1e {
     fi
 
     curl -sLo - \
-        https://github.com/fdintino/rav1e/releases/download/$RAV1E_VERSION/$librav1e_tgz \
-        | tar -C $BUILD_PREFIX -zxf -
+        https://github.com/xiph/rav1e/releases/download/$RAV1E_VERSION/$librav1e_tgz \
+        | tar -C $BUILD_PREFIX --exclude LICENSE -zxf -
 
     if [ ! -n "$IS_MACOS" ]; then
         sed -i 's/-lgcc_s/-lgcc_eh/g' "${BUILD_PREFIX}/lib/pkgconfig/rav1e.pc"
@@ -473,7 +473,7 @@ function build_libavif {
     group_start "Download libavif source"
 
     fetch_unpack \
-        "https://github.com/fdintino/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
+        "https://github.com/AOMediaCodec/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
         "libavif-$LIBAVIF_VERSION.tar.gz"
 
     group_end

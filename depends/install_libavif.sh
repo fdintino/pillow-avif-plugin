@@ -20,10 +20,15 @@ PKGCONFIG=${PKGCONFIG:-pkg-config}
 export CFLAGS="-fPIC -O3 $CFLAGS"
 export CXXFLAGS="-fPIC -O3 $CXXFLAGS"
 
+ARCHIVE="${LIBAVIF_VERSION}.tar.gz"
+if [[ "$LIBAVIF_VERSION" == *"."* ]]; then
+    ARCHIVE="v${ARCHIVE}"
+fi
+
 echo "::group::Fetching libavif"
 mkdir -p libavif-$LIBAVIF_VERSION
 curl -sLo - \
-    https://github.com/AOMediaCodec/libavif/archive/v$LIBAVIF_VERSION.tar.gz \
+    https://github.com/AOMediaCodec/libavif/archive/$ARCHIVE \
     | tar --strip-components=1 -C libavif-$LIBAVIF_VERSION -zxf -
 pushd libavif-$LIBAVIF_VERSION
 echo "::endgroup::"
