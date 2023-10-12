@@ -8,11 +8,6 @@ try:
 except ImportError:
     from multiprocessing import cpu_count
 
-try:
-    from unittest import mock
-except ImportError:
-    import mock
-
 import pytest
 
 from PIL import Image
@@ -90,6 +85,17 @@ def skip_unless_avif_version_gte(version):
         version_str = ".".join([str(v) for v in version])
         reason = "%s < %s" % (_avif.libavif_version, version_str)
         should_skip = _avif.VERSION < version
+    return pytest.mark.skipif(should_skip, reason=reason)
+
+
+def skip_unless_avif_version_lt(version):
+    if not _avif:
+        reason = "AVIF unavailable"
+        should_skip = True
+    else:
+        version_str = ".".join([str(v) for v in version])
+        reason = "%s > %s" % (_avif.libavif_version, version_str)
+        should_skip = _avif.VERSION >= version
     return pytest.mark.skipif(should_skip, reason=reason)
 
 
@@ -494,6 +500,7 @@ class TestFileAvif:
     def test_encoder_codec_available_invalid(self):
         assert _avif.encoder_codec_available("foo") is False
 
+    @skip_unless_avif_version_lt((1, 0, 0))
     @pytest.mark.parametrize(
         "quality,expected_qminmax",
         [
@@ -505,15 +512,16 @@ class TestFileAvif:
         ],
     )
     def test_encoder_quality_qmin_qmax_map(self, tmp_path, quality, expected_qminmax):
-        MockEncoder = mock.Mock(wraps=_avif.AvifEncoder)
-        with mock.patch.object(_avif, "AvifEncoder", new=MockEncoder) as mock_encoder:
-            with Image.open("tests/images/hopper.avif") as im:
-                test_file = str(tmp_path / "temp.avif")
-                if quality is None:
-                    im.save(test_file)
-                else:
-                    im.save(test_file, quality=quality)
-            assert mock_encoder.call_args[0][3:5] == expected_qminmax
+        qmin, qmax = expected_qminmax
+        with Image.open("tests/images/hopper.avif") as im:
+            out_quality = BytesIO()
+            out_qminmax = BytesIO()
+            im.save(out_qminmax, "AVIF", qmin=qmin, qmax=qmax)
+            if quality is None:
+                im.save(out_quality, "AVIF")
+            else:
+                im.save(out_quality, "AVIF", quality=quality)
+        assert len(out_quality.getvalue()) == len(out_qminmax.getvalue())
 
     def test_encoder_quality_valueerror(self, tmp_path):
         with Image.open("tests/images/hopper.avif") as im:
