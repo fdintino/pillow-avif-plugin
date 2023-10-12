@@ -126,23 +126,11 @@ def _save(im, fp, filename, save_all=False):
 
     is_single_frame = total == 1
 
-    qmin = info.get("qmin")
-    qmax = info.get("qmax")
-
-    if qmin is None and qmax is None:
-        # The min and max quantizer settings in libavif range from 0 (best quality)
-        # to 63 (worst quality). If neither are explicitly specified, we use a 0-100
-        # quality scale (default 75) and calculate the qmin and qmax from that.
-        #
-        # - qmin is 0 for quality >= 64. Below that, qmin has an inverse linear
-        #   relation to quality (i.e., quality 63 = qmin 1, quality 0 => qmin 63)
-        # - qmax is 0 for quality=100, then qmax increases linearly relative to
-        #   quality decreasing, until it flattens out at quality=37.
-        quality = info.get("quality", 75)
-        if not isinstance(quality, int) or quality < 0 or quality > 100:
-            raise ValueError("Invalid quality setting")
-        qmin = max(0, min(64 - quality, 63))
-        qmax = max(0, min(100 - quality, 63))
+    qmin = info.get("qmin", -1)
+    qmax = info.get("qmax", -1)
+    quality = info.get("quality", 75)
+    if not isinstance(quality, int) or quality < 0 or quality > 100:
+        raise ValueError("Invalid quality setting")
 
     duration = info.get("duration", 0)
     subsampling = info.get("subsampling", "4:2:0")

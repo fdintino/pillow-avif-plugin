@@ -257,8 +257,18 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
         return NULL;
     }
 
-    enc_options.qmin = normalize_quantize_value(qmin);
-    enc_options.qmax = normalize_quantize_value(qmax);
+    if (qmin == -1 || qmax == -1) {
+#if AVIF_VERSION >= 1000000
+        enc_options.qmin = -1;
+        enc_options.qmax = -1;
+#else
+        enc_options.qmin = normalize_quantize_value(64 - quality);
+        enc_options.qmax = normalize_quantize_value(100 - quality);
+#endif
+    } else {
+        enc_options.qmin = normalize_quantize_value(qmin);
+        enc_options.qmax = normalize_quantize_value(qmax);
+    }
     enc_options.quality = quality;
 
     if (speed < AVIF_SPEED_SLOWEST) {
@@ -326,7 +336,12 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
 
         encoder->maxThreads = max_threads;
 #if AVIF_VERSION >= 1000000
-        encoder->quality = enc_options.quality;
+        if (enc_options.qmin != -1 && enc_options.qmax != -1) {
+            encoder->minQuantizer = enc_options.qmin;
+            encoder->maxQuantizer = enc_options.qmax;
+        } else {
+            encoder->quality = enc_options.quality;
+        }
 #else
         encoder->minQuantizer = enc_options.qmin;
         encoder->maxQuantizer = enc_options.qmax;
