@@ -26,7 +26,7 @@ jobs:
         include:
         - python-version: "3.9"
           os: "ubuntu-20.04"
-          libavif-version: "1.0.1"
+          libavif-version: "2d0bb53b512eac5d5255f58c0d7a98b935396a5c"
         - python-version: "3.7"
           PYTHONOPTIMIZE: 1
         - python-version: "3.8"

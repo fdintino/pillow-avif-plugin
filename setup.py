@@ -28,6 +28,19 @@ def readme():
 IS_DEBUG = hasattr(sys, "gettotalrefcount")
 PLATFORM_MINGW = os.name == "nt" and "GCC" in sys.version
 
+libraries = ["avif"]
+if sys.platform == "win32":
+    libraries.extend(
+        [
+            "advapi32",
+            "bcrypt",
+            "ntdll",
+            "userenv",
+            "ws2_32",
+            "kernel32",
+        ]
+    )
+
 setup(
     name="pillow-avif-plugin",
     description="A pillow plugin that adds avif support via libavif",
@@ -39,7 +52,7 @@ setup(
             "pillow_avif._avif",
             ["src/pillow_avif/_avif.c"],
             depends=["avif/avif.h"],
-            libraries=["avif"],
+            libraries=libraries,
         ),
     ],
     package_data={"": ["README.rst"]},

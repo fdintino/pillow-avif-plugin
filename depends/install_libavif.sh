@@ -23,6 +23,7 @@ export CXXFLAGS="-fPIC -O3 $CXXFLAGS"
 ARCHIVE="${LIBAVIF_VERSION}.tar.gz"
 if [[ "$LIBAVIF_VERSION" == *"."* ]]; then
     ARCHIVE="v${ARCHIVE}"
+    HAS_EXT_DIR=1
 fi
 
 echo "::group::Fetching libavif"
@@ -67,10 +68,12 @@ if $PKGCONFIG --exists aom; then
 fi
 
 if [ "$HAS_ENCODER" != 1 ] || [ "$HAS_DECODER" != 1 ]; then
-    echo "::group::Building aom"
-    pushd ext > /dev/null
-    bash aom.cmd
-    popd > /dev/null
+    if [ -n "${HAS_EXT_DIR}" ]; then
+        echo "::group::Building aom"
+        pushd ext > /dev/null
+        bash aom.cmd
+        popd > /dev/null
+    fi
     LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_AOM=ON -DAVIF_LOCAL_AOM=ON)
     echo "::endgroup::"
 fi

@@ -120,13 +120,13 @@ jobs:
           export GITHUB_ACTIONS=1"
           EOF
 
-      - name: Cache build
-        id: build-cache
-        uses: actions/cache@v3
-        with:
-          path: pillow-avif-plugin/depends/libavif-${{ env.LIBAVIF_VERSION }}
-          key:
-            ${{ env.LIBAVIF_VERSION }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*') }}-${{ matrix.os }}-${{ env.PLAT }}
+      # - name: Cache build
+      #   id: build-cache
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: pillow-avif-plugin/depends/libavif-${{ env.LIBAVIF_VERSION }}
+      #     key:
+      #       ${{ env.LIBAVIF_VERSION }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*') }}-${{ matrix.os }}-${{ env.PLAT }}
 
       - name: Cache ccache/sccache
         uses: actions/cache@v3
