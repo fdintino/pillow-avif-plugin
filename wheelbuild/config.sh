@@ -180,7 +180,7 @@ function install_ninja {
     if [ -n "$IS_MACOS" ]; then
         brew install ninja
     else
-        $PYTHON_EXE -m pip install ninja
+        $PYTHON_EXE -m pip install ninja==1.11.1
         local ninja_exe=$(dirname $PYTHON_EXE)/ninja
         ln -s $ninja_exe /usr/local/bin/ninja-build
     fi
