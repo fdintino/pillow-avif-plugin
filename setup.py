@@ -42,7 +42,7 @@ setup(
             libraries=["avif"],
         ),
     ],
-    package_data={"": ["README.rst"]},
+    package_data={"": ["README.rst", "*.c"]},
     package_dir={"": "src"},
     packages=["pillow_avif"],
     license="MIT License",
