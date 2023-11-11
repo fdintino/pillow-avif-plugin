@@ -135,6 +135,7 @@ def _save(im, fp, filename, save_all=False):
     duration = info.get("duration", 0)
     subsampling = info.get("subsampling", "4:2:0")
     speed = info.get("speed", 6)
+    depth = info.get("bit_depth", 8)
     codec = info.get("codec", "auto")
     range_ = info.get("range", "full")
     tile_rows_log2 = info.get("tile_rows", 0)
@@ -179,6 +180,7 @@ def _save(im, fp, filename, save_all=False):
         qmax,
         quality,
         speed,
+        depth,
         codec,
         range_,
         tile_rows_log2,

@@ -208,6 +208,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
     int qmax = 10;                           // "High Quality", but not lossless
     int quality = 75;
     int speed = 8;
+    int depth = 8;
     PyObject *icc_bytes;
     PyObject *exif_bytes;
     PyObject *xmp_bytes;
@@ -231,6 +232,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
             &qmax,
             &quality,
             &speed,
+            &depth,
             &codec,
             &range,
             &tile_rows_log2,
@@ -371,7 +373,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
         image->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT601;
         image->width = width;
         image->height = height;
-        image->depth = 8;
+        image->depth = depth;
 #if AVIF_VERSION >= 90000
         image->alphaPremultiplied = enc_options.alpha_premultiplied;
 #endif
@@ -498,6 +500,7 @@ _encoder_add(AvifEncoderObject *self, PyObject *args) {
 
     avifRGBImageSetDefaults(&rgb, frame);
     rgb.depth = 8;
+//    rgb.depth = frame->depth != 0 ? rgb.depth : 8;
 
     if (strcmp(mode, "RGBA") == 0) {
         rgb.format = AVIF_RGB_FORMAT_RGBA;
@@ -776,6 +779,7 @@ _decoder_get_frame(AvifDecoderObject *self, PyObject *args) {
     avifRGBImageSetDefaults(&rgb, image);
 
     rgb.depth = 8;
+//    rgb.depth = image->depth != 0 ? image->depth : 8;
 
     if (decoder->alphaPresent) {
         rgb.format = AVIF_RGB_FORMAT_RGBA;
