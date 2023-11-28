@@ -436,7 +436,7 @@ function build_libavif {
     build_dav1d
     LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_DAV1D=ON)
 
-    if [ "$PLAT" == "x86_64" ]; then
+    if [ "$PLAT" == "x86_64" ] || [ "$PLAT" == "arm64" ] || [ "$PLAT" == "aarch64" ]; then
         if [ -n "$IS_MACOS" ]; then
             build_svt_av1
             LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=ON)
