@@ -227,12 +227,8 @@ function build_libavif {
     fi
     which cmake
     cmake --version
-    if [ "$PLAT" == "x86_64" ]; then
-        if [ -n "$IS_MACOS" ]; then
-            LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
-        elif [[ "$MB_ML_VER" != "1" ]]; then
-            LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
-        fi
+    if [ "$MB_ML_VER" != "1" ]; then
+        LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
     fi
 
     build_rav1e
