@@ -56,6 +56,9 @@ class AvifImageFile(ImageFile.ImageFile):
     __loaded = -1
     __frame = 0
 
+    def load_seek(self, pos):
+        pass
+
     def _open(self):
         self._decoder = _avif.AvifDecoder(
             self.fp.read(), DECODE_CODEC_CHOICE, CHROMA_UPSAMPLING
