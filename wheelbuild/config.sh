@@ -521,6 +521,8 @@ function install_cmake {
     else
         if [[ "$MB_ML_VER" == "1" ]]; then
             $PYTHON_EXE -m pip install 'cmake<3.23'
+        elif [ "$MB_PYTHON_VERSION" == "2.7" ]; then
+            $PYTHON_EXE -m pip install 'cmake==3.27.7'
         else
             $PYTHON_EXE -m pip install cmake
         fi
