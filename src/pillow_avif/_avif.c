@@ -139,6 +139,118 @@ exc_type_for_avif_result(avifResult result) {
     }
 }
 
+static void
+exif_orientation_to_irot_imir(avifImage *image, int orientation) {
+    const avifTransformFlags otherFlags =
+        image->transformFlags & ~(AVIF_TRANSFORM_IROT | AVIF_TRANSFORM_IMIR);
+
+    //
+    // Mapping from Exif orientation as defined in JEITA CP-3451C section 4.6.4.A
+    // Orientation to irot and imir boxes as defined in HEIF ISO/IEC 28002-12:2021
+    // sections 6.5.10 and 6.5.12.
+    switch (orientation) {
+        case 1:  // The 0th row is at the visual top of the image, and the 0th column is
+                 // the visual left-hand side.
+            image->transformFlags = otherFlags;
+            image->irot.angle = 0;  // ignored
+#if AVIF_VERSION_MAJOR >= 1
+            image->imir.axis = 0;   // ignored
+#else
+            image->imir.mode = 0;   // ignored
+#endif
+            return;
+        case 2:  // The 0th row is at the visual top of the image, and the 0th column is
+                 // the visual right-hand side.
+            image->transformFlags = otherFlags | AVIF_TRANSFORM_IMIR;
+            image->irot.angle = 0;  // ignored
+#if AVIF_VERSION_MAJOR >= 1
+            image->imir.axis = 1;
+#else
+            image->imir.mode = 1;
+#endif
+            return;
+        case 3:  // The 0th row is at the visual bottom of the image, and the 0th column
+                 // is the visual right-hand side.
+            image->transformFlags = otherFlags | AVIF_TRANSFORM_IROT;
+            image->irot.angle = 2;
+#if AVIF_VERSION_MAJOR >= 1
+            image->imir.axis = 0;  // ignored
+#else
+            image->imir.mode = 0;  // ignored
+#endif
+            return;
+        case 4:  // The 0th row is at the visual bottom of the image, and the 0th column
+                 // is the visual left-hand side.
+            image->transformFlags = otherFlags | AVIF_TRANSFORM_IMIR;
+            image->irot.angle = 0;  // ignored
+#if AVIF_VERSION_MAJOR >= 1
+            image->imir.axis = 0;
+#else
+            image->imir.mode = 0;
+#endif
+            return;
+        case 5:  // The 0th row is the visual left-hand side of the image, and the 0th
+                 // column is the visual top.
+            image->transformFlags =
+                otherFlags | AVIF_TRANSFORM_IROT | AVIF_TRANSFORM_IMIR;
+            image->irot.angle = 1;  // applied before imir according to MIAF spec
+                                    // ISO/IEC 28002-12:2021 - section 7.3.6.7
+#if AVIF_VERSION_MAJOR >= 1
+            image->imir.axis = 0;
+#else
+            image->imir.mode = 0;
+#endif
+            return;
+        case 6:  // The 0th row is the visual right-hand side of the image, and the 0th
+                 // column is the visual top.
+            image->transformFlags = otherFlags | AVIF_TRANSFORM_IROT;
+            image->irot.angle = 3;
+#if AVIF_VERSION_MAJOR >= 1
+            image->imir.axis = 0;  // ignored
+#else
+            image->imir.mode = 0;  // ignored
+#endif
+            return;
+        case 7:  // The 0th row is the visual right-hand side of the image, and the 0th
+                 // column is the visual bottom.
+            image->transformFlags =
+                otherFlags | AVIF_TRANSFORM_IROT | AVIF_TRANSFORM_IMIR;
+            image->irot.angle = 3;  // applied before imir according to MIAF spec
+                                    // ISO/IEC 28002-12:2021 - section 7.3.6.7
+#if AVIF_VERSION_MAJOR >= 1
+            image->imir.axis = 0;
+#else
+            image->imir.mode = 0;
+#endif
+            return;
+        case 8:  // The 0th row is the visual left-hand side of the image, and the 0th
+                 // column is the visual bottom.
+            image->transformFlags = otherFlags | AVIF_TRANSFORM_IROT;
+            image->irot.angle = 1;
+#if AVIF_VERSION_MAJOR >= 1
+            image->imir.axis = 0;  // ignored
+#else
+            image->imir.mode = 0;  // ignored
+#endif
+            return;
+        default:  // reserved
+            break;
+    }
+
+    // The orientation tag is not mandatory (only recommended) according to JEITA
+    // CP-3451C section 4.6.8.A. The default value is 1 if the orientation tag is
+    // missing, meaning:
+    //   The 0th row is at the visual top of the image, and the 0th column is the visual
+    //   left-hand side.
+    image->transformFlags = otherFlags;
+    image->irot.angle = 0;  // ignored
+#if AVIF_VERSION_MAJOR >= 1
+    image->imir.axis = 0;   // ignored
+#else
+    image->imir.mode = 0;   // ignored
+#endif
+}
+
 static int
 _codec_available(const char *name, uint32_t flags) {
     avifCodecChoice codec = avifCodecChoiceFromName(name);
@@ -208,6 +320,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
     int qmax = 10;                           // "High Quality", but not lossless
     int quality = 75;
     int speed = 8;
+    int exif_orientation = 0;
     PyObject *icc_bytes;
     PyObject *exif_bytes;
     PyObject *xmp_bytes;
@@ -223,7 +336,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "IIsiiiissiiOOSSSO",
+            "IIsiiiissiiOOSSiSO",
             &width,
             &height,
             &subsampling,
@@ -239,6 +352,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
             &autotiling,
             &icc_bytes,
             &exif_bytes,
+            &exif_orientation,
             &xmp_bytes,
             &advanced)) {
         return NULL;
@@ -404,6 +518,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
                 (uint8_t *)PyBytes_AS_STRING(xmp_bytes),
                 PyBytes_GET_SIZE(xmp_bytes));
         }
+        exif_orientation_to_irot_imir(image, exif_orientation);
 
         self->image = image;
         self->frame_index = -1;
