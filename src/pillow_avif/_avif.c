@@ -86,6 +86,11 @@ init_max_threads(void) {
     }
 
     max_threads = (int)num_cpus;
+    // The max allowable value of maxThreads for AVIF
+    // encoders is 64. The encoder crashes otherwise.
+    if (max_threads > 64) {
+        max_threads = 64;
+    }
 
 done:
     Py_XDECREF(os);
