@@ -180,54 +180,46 @@ DEPS = {
     },
     "libavif": {
         "url": (
-            "https://github.com/AOMediaCodec/libavif/archive/"
-            "ee29bec775ab8e6d555f602775301c14302b96e7.zip"
+            "https://github.com/fdintino/libavif/archive/"
+            "88d3dccda111f6ccbcccd925179f67e7d6fdf4ff.zip"
         ),
-        "filename": "libavif-ee29bec775ab8e6d555f602775301c14302b96e7.zip",
-        "dir": "libavif-ee29bec775ab8e6d555f602775301c14302b96e7",
+        "filename": "libavif-88d3dccda111f6ccbcccd925179f67e7d6fdf4ff.zip",
+        "dir": "libavif-88d3dccda111f6ccbcccd925179f67e7d6fdf4ff",
         "license": "LICENSE",
         "build": [
-            cmd_mkdir(r"ext\rav1e\build.libavif\usr"),
-            cmd_xcopy(r"..\rav1e-windows-msvc-sdk", r"ext\rav1e\build.libavif\usr"),
-            cmd_cd("ext"),
-            "@echo ::group::Building SVT-AV1",
-            cmd_rmdir("SVT-AV1"),
-            "cmd.exe /c svt.cmd",
-            "@echo ::endgroup::",
-            "@echo ::group::Building aom",
-            cmd_rmdir("aom"),
-            'cmd.exe /c "aom.cmd"',
-            "@echo ::endgroup::",
-            "@echo ::group::Building dav1d",
-            cmd_rmdir("dav1d"),
-            'cmd.exe /c "dav1d.cmd"',
-            "@echo ::endgroup::",
-            "@echo ::group::Building libyuv",
-            cmd_rmdir("libyuv"),
-            'cmd.exe /c "libyuv.cmd"',
-            "@echo ::endgroup::",
-            "@echo ::group::Building libsharpyuv",
-            cmd_rmdir("libsharpyuv"),
-            'cmd.exe /c "libsharpyuv.cmd"',
-            "@echo ::endgroup::",
-            "@echo ::group::Building libavif",
-            cmd_cd(".."),
-            *cmds_cmake(
-                "avif",
-                "-DBUILD_SHARED_LIBS=OFF",
-                "-DAVIF_CODEC_AOM=ON",
-                "-DAVIF_LOCAL_AOM=ON",
-                "-DAVIF_LOCAL_LIBYUV=ON",
-                "-DAVIF_LOCAL_LIBSHARPYUV=ON",
-                "-DAVIF_CODEC_RAV1E=ON",
-                "-DAVIF_CODEC_DAV1D=ON",
-                "-DAVIF_LOCAL_DAV1D=ON",
-                "-DAVIF_CODEC_SVT=ON",
-                "-DAVIF_LOCAL_SVT=ON",
+            cmd_mkdir("build.pillow"),
+            cmd_cd("build.pillow"),
+            " ".join(
+                [
+                    "{cmake}",
+                    "-DCMAKE_BUILD_TYPE=Release",
+                    "-DCMAKE_VERBOSE_MAKEFILE=ON",
+                    "-DCMAKE_RULE_MESSAGES:BOOL=OFF",  # for NMake
+                    "-DCMAKE_C_COMPILER=cl.exe",  # for Ninja
+                    "-DCMAKE_CXX_COMPILER=cl.exe",  # for Ninja
+                    "-DCMAKE_C_FLAGS=-nologo",
+                    "-DCMAKE_CXX_FLAGS=-nologo",
+                    "-DBUILD_SHARED_LIBS=OFF",
+                    "-DAVIF_CODEC_AOM=ON",
+                    "-DAVIF_LOCAL_AOM=ON",
+                    "-DAVIF_LOCAL_LIBYUV=ON",
+                    "-DAVIF_LOCAL_LIBSHARPYUV=ON",
+                    "-DAVIF_CODEC_RAV1E=ON",
+                    "-DAVIF_RAV1E_ROOT={build_dir}",
+                    "-DCMAKE_MODULE_PATH={winbuild_dir_cmake}",
+                    "-DAVIF_CODEC_DAV1D=ON",
+                    "-DAVIF_LOCAL_DAV1D=ON",
+                    "-DAVIF_CODEC_SVT=ON",
+                    "-DAVIF_LOCAL_SVT=ON",
+                    '-G "Ninja"',
+                    "..",
+                ]
             ),
+            "ninja -v",
+            cmd_cd(".."),
             cmd_xcopy("include", "{inc_dir}"),
         ],
-        "libs": [r"avif.lib"],
+        "libs": [r"build.pillow\avif.lib"],
     },
 }
 
@@ -562,6 +554,7 @@ if __name__ == "__main__":
         # Pillow paths
         "pillow_dir": pillow_dir,
         "winbuild_dir": winbuild_dir,
+        "winbuild_dir_cmake": winbuild_dir.replace("\\", "/"),
         # Build paths
         "build_dir": args.build_dir,
         "inc_dir": inc_dir,

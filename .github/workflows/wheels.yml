@@ -14,7 +14,7 @@ env:
   MACOSX_DEPLOYMENT_TARGET: "10.10"
   WHEEL_SDIR: wheelhouse
   CONFIG_PATH: pillow-avif-plugin/wheelbuild/config.sh
-  LIBAVIF_VERSION: ee29bec775ab8e6d555f602775301c14302b96e7
+  LIBAVIF_VERSION: 88d3dccda111f6ccbcccd925179f67e7d6fdf4ff
 
 jobs:
   build:
@@ -125,13 +125,13 @@ jobs:
           export GITHUB_ACTIONS=1"
           EOF
 
-      - name: Cache build
-        id: build-cache
-        uses: actions/cache@v3
-        with:
-          path: pillow-avif-plugin/depends/libavif-${{ env.LIBAVIF_VERSION }}
-          key:
-            ${{ env.LIBAVIF_VERSION }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*') }}-${{ matrix.os }}-${{ env.PLAT }}
+      # - name: Cache build
+      #   id: build-cache
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: pillow-avif-plugin/depends/libavif-${{ env.LIBAVIF_VERSION }}
+      #     key:
+      #       ${{ env.LIBAVIF_VERSION }}-${{ hashFiles('pillow-avif-plugin/wheelbuild/*.sh', 'pillow-avif-plugin/.github/workflows/wheels.yml', 'pillow-avif-plugin/depends/*') }}-${{ matrix.os }}-${{ env.PLAT }}
 
       - name: Cache ccache/sccache
         uses: actions/cache@v3

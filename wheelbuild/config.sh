@@ -4,13 +4,8 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=ee29bec775ab8e6d555f602775301c14302b96e7
-AOM_VERSION=3.7.0
-DAV1D_VERSION=1.2.1
-SVT_AV1_VERSION=1.7.0
+LIBAVIF_VERSION=88d3dccda111f6ccbcccd925179f67e7d6fdf4ff
 RAV1E_VERSION=p20231003
-LIBWEBP_SHA=e2c85878f6a33f29948b43d3492d9cdaf801aa54
-LIBYUV_SHA=464c51a0
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
@@ -189,152 +184,6 @@ function install_ninja {
     touch ninja-stamp
 }
 
-function build_aom {
-    if [ -e aom-stamp ]; then return; fi
-
-    group_start "Build aom"
-
-    local cmake_flags=()
-
-    fetch_unpack \
-        https://storage.googleapis.com/aom-releases/libaom-$AOM_VERSION.tar.gz
-
-    if [ ! -n "$IS_MACOS" ] && [[ "$MB_ML_VER" == "1" ]]; then
-        (cd libaom-$AOM_VERSION \
-            && patch -p1 -i $CONFIG_DIR/aom-2.0.2-manylinux1.patch)
-    fi
-    if [ ! -n "$IS_MACOS" ]; then
-        cmake_flags+=("-DCMAKE_C_FLAGS=-fPIC")
-    elif [ "$PLAT" == "arm64" ]; then
-        cmake_flags+=(\
-            -DAOM_TARGET_CPU=arm64 \
-            -DCONFIG_RUNTIME_CPU_DETECT=0 \
-            -DCMAKE_SYSTEM_PROCESSOR=arm64 \
-            -DCMAKE_OSX_ARCHITECTURES=arm64)
-    fi
-    if [[ $(type -P ccache) ]]; then
-        cmake_flags+=(\
-            -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
-    fi
-    if [ -n "$IS_ALPINE" ]; then
-        (cd libaom-$AOM_VERSION \
-            && patch -p1 -i $CONFIG_DIR/aom-fix-stack-size.patch)
-        extra_cmake_flags+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
-    fi
-
-    mkdir libaom-$AOM_VERSION/build/work
-    (cd libaom-$AOM_VERSION/build/work \
-        && cmake \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCONFIG_PIC=1 \
-            -DCMAKE_INSTALL_PREFIX="${BUILD_PREFIX}" \
-            -DCMAKE_INSTALL_LIBDIR=lib \
-            -DBUILD_SHARED_LIBS=0 \
-            -DENABLE_DOCS=0 \
-            -DENABLE_EXAMPLES=0 \
-            -DENABLE_TESTDATA=0 \
-            -DENABLE_TESTS=0 \
-            -DENABLE_TOOLS=0 \
-            "${cmake_flags[@]}" \
-            ../.. \
-        && make install)
-
-    require_package aom
-
-    group_end
-    touch aom-stamp
-}
-
-function build_dav1d {
-    if [ -e dav1d-stamp ]; then return; fi
-
-    local cflags="$CFLAGS"
-    local ldflags="$LDFLAGS"
-    local meson_flags=()
-
-    local CC=$(type -P "${CC:-gcc}")
-    local CXX=$(type -P "${CXX:-g++}")
-    if [[ $(type -P ccache) ]]; then
-        CC="$(type -P ccache) $CC"
-        CXX="$(type -P ccache) $CXX"
-    fi
-
-    group_start "Build dav1d"
-    fetch_unpack "https://code.videolan.org/videolan/dav1d/-/archive/$DAV1D_VERSION/dav1d-$DAV1D_VERSION.tar.gz"
-
-    cat <<EOF > dav1d-$DAV1D_VERSION/config.txt
-[binaries]
-c     = 'clang'
-cpp   = 'clang++'
-ar    = 'ar'
-ld    = 'ld'
-strip = 'strip'
-[built-in options]
-c_args = '$CFLAGS'
-c_link_args = '$LDFLAGS'
-[host_machine]
-system = 'darwin'
-cpu_family = 'aarch64'
-cpu = 'arm'
-endian = 'little'
-EOF
-
-    if [ "$PLAT" == "arm64" ]; then
-        cflags=""
-        ldflags=""
-        meson_flags+=(--cross-file config.txt)
-    fi
-
-    (cd dav1d-$DAV1D_VERSION \
-        && CFLAGS="$cflags" LDFLAGS="$ldflags" CC="$CC" CXX="$CXX" \
-           meson . build \
-              "--prefix=${BUILD_PREFIX}" \
-              --default-library=static \
-              --buildtype=release \
-              -D enable_tools=false \
-              -D enable_tests=false \
-             "${meson_flags[@]}" \
-        && SCCACHE_DIR="$SCCACHE_DIR" ninja -vC build install)
-    group_end
-    touch dav1d-stamp
-}
-
-function build_svt_av1 {
-    if [ -e svt-av1-stamp ]; then return; fi
-
-    group_start "Build SVT-AV1"
-
-    fetch_unpack \
-        "https://gitlab.com/AOMediaCodec/SVT-AV1/-/archive/v$SVT_AV1_VERSION/SVT-AV1-v$SVT_AV1_VERSION.tar.gz"
-
-    local extra_cmake_flags=()
-    if [ -n "$IS_ALPINE" ]; then
-        extra_cmake_flags+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
-    fi
-    if [[ $(type -P ccache) ]]; then
-        extra_cmake_flags+=(\
-            -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
-    fi
-    (cd SVT-AV1-v$SVT_AV1_VERSION/Build/linux \
-        && cmake \
-            ../.. \
-            -DCMAKE_INSTALL_PREFIX="${BUILD_PREFIX}" \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_LIBDIR=lib \
-            "${extra_cmake_flags[@]}" \
-        && make install \
-        && cp SvtAv1Enc.pc $BUILD_PREFIX/lib/pkgconfig)
-
-    require_package SvtAv1Enc
-
-    group_end
-
-    touch svt-av1-stamp
-}
-
 function build_rav1e {
     group_start "Build rav1e"
 
@@ -366,89 +215,35 @@ function build_rav1e {
     group_end
 }
 
-function build_libsharpyuv {
-    if [ -e libsharpyuv-stamp ]; then return; fi
-
-    group_start "Build libsharpyuv"
-    fetch_unpack https://github.com/webmproject/libwebp/archive/$LIBWEBP_SHA.tar.gz libwebp-$LIBWEBP_SHA.tar.gz
-
-    mkdir -p libwebp-$LIBWEBP_SHA/build
-
-    local cmake_flags=()
-    if [[ $(type -P ccache) ]]; then
-        cmake_flags+=(\
-            -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
-    fi
-
-    (cd libwebp-$LIBWEBP_SHA/build \
-        && cmake .. -G Ninja \
-            -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
-             "${cmake_flags[@]}" \
-        && ninja sharpyuv)
-
-    group_end
-    touch libsharpyuv-stamp
-}
-
-function build_libyuv {
-    if [ -e libyuv-stamp ]; then return; fi
-
-    group_start "Build libyuv"
-
-    mkdir -p libyuv-$LIBYUV_SHA
-    (cd libyuv-$LIBYUV_SHA && \
-        fetch_unpack "https://chromium.googlesource.com/libyuv/libyuv/+archive/$LIBYUV_SHA.tar.gz")
-    mkdir -p libyuv-$LIBYUV_SHA/build
-    local cmake_flags=()
-    if [ ! -n "$IS_MACOS" ]; then
-        cmake_flags+=("-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
-    fi
-    if [[ $(type -P ccache) ]]; then
-        cmake_flags+=(\
-            -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
-    fi
-    (cd libyuv-$LIBYUV_SHA/build \
-        && cmake -G Ninja .. \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-            "${cmake_flags[@]}" .. \
-        && ninja yuv)
-
-    group_end
-    touch libyuv-stamp
-}
-
 function build_libavif {
     LIBAVIF_CMAKE_FLAGS=()
 
     if [ -n "$IS_MACOS" ]; then
         brew remove --ignore-dependencies webp jpeg-xl aom composer gd imagemagick libavif libheif php
     fi
-
-    build_aom
-    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_AOM=ON)
-
-    build_dav1d
-    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_DAV1D=ON)
-
+    which cmake
+    cmake --version
     if [ "$PLAT" == "x86_64" ]; then
         if [ -n "$IS_MACOS" ]; then
-            build_svt_av1
-            LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=ON)
+            LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
         elif [[ "$MB_ML_VER" != "1" ]]; then
-            LDFLAGS=-lrt build_svt_av1
-            LIBAVIF_CMAKE_FLAGS+=(-DCMAKE_EXE_LINKER_FLAGS=-lrt)
-            LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=ON)
+            LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
         fi
     fi
 
     build_rav1e
-    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_RAV1E=ON)
+
+    # Force libavif to treat system rav1e as if it were local
+    mkdir -p /tmp/cmake/Modules
+    cat <<EOF > /tmp/cmake/Modules/Findrav1e.cmake
+    add_library(rav1e::rav1e STATIC IMPORTED GLOBAL)
+    set_target_properties(rav1e::rav1e PROPERTIES
+        IMPORTED_LOCATION "$BUILD_PREFIX/lib/librav1e.a"
+        AVIF_LOCAL ON
+        INTERFACE_INCLUDE_DIRECTORIES "$BUILD_PREFIX/include/rav1e"
+    )
+EOF
+
 
     if [ -n "$IS_MACOS" ]; then
         # Prevent cmake from using @rpath in install id, so that delocate can
@@ -457,12 +252,8 @@ function build_libavif {
             "-DCMAKE_INSTALL_NAME_DIR=$BUILD_PREFIX/lib" \
             -DCMAKE_MACOSX_RPATH=OFF)
         if [ "$PLAT" == "arm64" ]; then
-            LIBAVIF_CMAKE_FLAGS+=(\
-                -DCMAKE_SYSTEM_PROCESSOR=arm64 \
-                -DCMAKE_OSX_ARCHITECTURES=arm64)
+            LIBAVIF_CMAKE_FLAGS+=(-DCMAKE_TOOLCHAIN_FILE=$CONFIG_DIR/toolchain-arm64-macos.cmake)
         fi
-    else
-        LIBAVIF_CMAKE_FLAGS+=("-DCMAKE_POSITION_INDEPENDENT_CODE=ON")
     fi
     if [[ $(type -P ccache) ]]; then
         LIBAVIF_CMAKE_FLAGS+=(\
@@ -478,14 +269,6 @@ function build_libavif {
 
     group_end
 
-    build_libsharpyuv
-    mv libwebp-$LIBWEBP_SHA libavif-$LIBAVIF_VERSION/ext/libwebp
-    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LOCAL_LIBSHARPYUV=ON)
-
-    build_libyuv
-    mv libyuv-$LIBYUV_SHA libavif-$LIBAVIF_VERSION/ext/libyuv
-    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LOCAL_LIBYUV=ON)
-
     group_start "Build libavif"
 
     mkdir -p libavif-$LIBAVIF_VERSION/build
@@ -496,6 +279,12 @@ function build_libavif {
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF \
+            -DAVIF_LIBSHARPYUV=LOCAL \
+            -DAVIF_LIBYUV=LOCAL \
+            -DAVIF_CODEC_RAV1E=ON -DCMAKE_MODULE_PATH=/tmp/cmake/Modules \
+            -DAVIF_CODEC_AOM=LOCAL \
+            -DAVIF_CODEC_DAV1D=LOCAL \
+            -DENABLE_NASM=ON \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && ninja -v install/strip)
 
@@ -637,7 +426,7 @@ function run_tests {
         $PYTHON_EXE -m pip install mock
     fi
     # Runs tests on installed distribution from an empty directory
-    (cd ../pillow-avif-plugin && pytest)
+    (cd ../pillow-avif-plugin && pytest -v)
 }
 
 # Work around flakiness of pip install with python 2.7
