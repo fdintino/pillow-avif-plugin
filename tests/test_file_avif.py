@@ -2,6 +2,7 @@ import os
 import xml.etree.ElementTree
 from contextlib import contextmanager
 from io import BytesIO
+import warnings
 
 try:
     from os import cpu_count
@@ -199,7 +200,9 @@ class TestFileAvif:
     def test_no_resource_warning(self, tmp_path):
         with Image.open(TEST_AVIF_FILE) as image:
             temp_file = str(tmp_path / "temp.avif")
-            pytest.warns(None, image.save, temp_file)
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
+                image.save(temp_file)
 
     def test_file_pointer_could_be_reused(self):
         with open(TEST_AVIF_FILE, "rb") as blob:
