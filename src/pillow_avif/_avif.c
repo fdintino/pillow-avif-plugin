@@ -86,11 +86,6 @@ init_max_threads(void) {
     }
 
     max_threads = (int)num_cpus;
-    // The max allowable value of maxThreads for AVIF
-    // encoders is 64. The encoder crashes otherwise.
-    if (max_threads > 64) {
-        max_threads = 64;
-    }
 
 done:
     Py_XDECREF(os);
@@ -451,6 +446,16 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
 
         if (max_threads == 0) {
             init_max_threads();
+        }
+
+        max_threads = 96;
+
+        if (strcmp(codec, "aom") == 0 || strcmp(codec, "avm") == 0){
+            if (max_threads > 64 ) {
+                // Encoding with libaom and libavm will fail if
+                // encoder->maxThreads is set higher than 64
+                max_threads = 64;
+            }
         }
 
         encoder->maxThreads = max_threads;
