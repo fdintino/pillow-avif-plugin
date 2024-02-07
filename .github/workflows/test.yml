@@ -1,7 +1,12 @@
 name: Test
 
-on: [push, pull_request]
-
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
 jobs:
   build:
 
@@ -26,7 +31,7 @@ jobs:
         include:
         - python-version: "3.9"
           os: "ubuntu-20.04"
-          libavif-version: "1.0.1"
+          libavif-version: "88d3dccda111f6ccbcccd925179f67e7d6fdf4ff"
         - python-version: "3.7"
           PYTHONOPTIMIZE: 1
         - python-version: "3.8"
