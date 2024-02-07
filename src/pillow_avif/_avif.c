@@ -448,15 +448,11 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
             init_max_threads();
         }
 
-        if (strcmp(codec, "aom") == 0 || strcmp(codec, "avm") == 0){
-            if (max_threads > 64 ) {
-                // Encoding with libaom and libavm will fail if
-                // encoder->maxThreads is set higher than 64
-                max_threads = 64;
-            }
-        }
+        int is_aom_encode = strcmp(codec, "aom") == 0 ||
+                            (strcmp(codec, "auto") == 0 &&
+                             _codec_available("aom", AVIF_CODEC_FLAG_CAN_ENCODE));
 
-        encoder->maxThreads = max_threads;
+        encoder->maxThreads = is_aom_encode && max_threads > 64 ? 64 : max_threads;
 #if AVIF_VERSION >= 1000000
         if (enc_options.qmin != -1 && enc_options.qmax != -1) {
             encoder->minQuantizer = enc_options.qmin;
