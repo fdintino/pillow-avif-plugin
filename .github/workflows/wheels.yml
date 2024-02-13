@@ -93,18 +93,18 @@ jobs:
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.arch == 'arm' && '11.0' || '10.10' }}
       MB_ML_LIBC: ${{ matrix.mb-ml-libc }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: pillow-avif-plugin
 
       - name: Checkout dependencies
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: fdintino/pillow-avif-plugin-depends
           path: pillow-avif-plugin-depends
 
       - name: Checkout multibuild
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: multi-build/multibuild
           path: multibuild
@@ -176,10 +176,10 @@ jobs:
 
     steps:
     - name: Checkout pillow-avif-plugin
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Checkout cached dependencies
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: python-pillow/pillow-depends
         path: winbuild\depends
