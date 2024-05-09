@@ -336,7 +336,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "IIsiiiissiiOOSSiSO",
+            "IIsiiiiissiiOOSSiSO",
             &width,
             &height,
             &subsampling,
@@ -344,6 +344,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
             &qmax,
             &quality,
             &speed,
+            &max_threads,
             &codec,
             &range,
             &tile_rows_log2,
