@@ -731,10 +731,11 @@ AvifDecoderNew(PyObject *self_, PyObject *args) {
     char *codec_str;
     avifCodecChoice codec;
     avifChromaUpsampling upsampling;
+    int max_threads = 0;
 
     avifResult result;
 
-    if (!PyArg_ParseTuple(args, "Sss", &avif_bytes, &codec_str, &upsampling_str)) {
+    if (!PyArg_ParseTuple(args, "Sssi", &avif_bytes, &codec_str, &upsampling_str, &max_threads)) {
         return NULL;
     }
 
@@ -782,10 +783,13 @@ AvifDecoderNew(PyObject *self_, PyObject *args) {
 
     self->decoder = avifDecoderCreate();
 #if AVIF_VERSION >= 80400
-    if (default_max_threads == 0) {
-        init_max_threads();
+    if (max_threads == 0) {
+        if (default_max_threads == 0) {
+            init_max_threads();
+        }
+        max_threads = default_max_threads;
     }
-    self->decoder->maxThreads = default_max_threads;
+    self->decoder->maxThreads = max_threads;
 #endif
     self->decoder->codecChoice = codec;
 

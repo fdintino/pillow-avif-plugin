@@ -62,7 +62,7 @@ class AvifImageFile(ImageFile.ImageFile):
 
     def _open(self):
         self._decoder = _avif.AvifDecoder(
-            self.fp.read(), DECODE_CODEC_CHOICE, CHROMA_UPSAMPLING
+            self.fp.read(), DECODE_CODEC_CHOICE, CHROMA_UPSAMPLING, DEFAULT_MAX_THREADS
         )
 
         # Get info from decoder
