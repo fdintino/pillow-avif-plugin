@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=88d3dccda111f6ccbcccd925179f67e7d6fdf4ff
+LIBAVIF_VERSION=9ece9c7fdf4e8790f8d03b33f675f63ee8d08184
 RAV1E_VERSION=p20231003
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
