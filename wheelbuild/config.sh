@@ -219,7 +219,9 @@ function build_libavif {
     LIBAVIF_CMAKE_FLAGS=()
 
     if [ -n "$IS_MACOS" ]; then
-        brew remove --ignore-dependencies webp jpeg-xl aom composer gd imagemagick libavif libheif php
+        for pkg in webp jpeg-xl aom composer gd imagemagick libavif libheif php; do
+            brew remove --ignore-dependencies $pkg ||:
+        done
     fi
     which cmake
     cmake --version
