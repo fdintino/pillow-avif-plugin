@@ -8,7 +8,11 @@ fi
 LIBAVIF_CMAKE_FLAGS=()
 
 if uname -s | grep -q Darwin; then
-    PREFIX=/usr/local
+    if [ -w /usr/local ]; then 
+        PREFIX=/usr/local
+    else
+        PREFIX=$(brew --prefix)
+    fi
 else
     PREFIX=/usr
 fi
