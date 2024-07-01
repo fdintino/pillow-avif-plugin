@@ -34,7 +34,23 @@ jobs:
           - python: "2.7"
             os-type: "ubuntu"
             arch: "arm"
+          - python: "2.7"
+            os-type: "macos"
+            arch: "arm"
+          - python: "3.7"
+            os-type: "macos"
+            arch: "arm"
         include:
+          - os-type: "macos"
+            os: "macos-13"
+            python: "2.7"
+            arch: "arm"
+            os-name: "osx"
+          - os-type: "macos"
+            os: "macos-13"
+            python: "3.7"
+            arch: "arm"
+            os-name: "osx"
           - os-type: "ubuntu"
             os: "ubuntu-latest"
             python: "2.7"
@@ -96,7 +112,7 @@ jobs:
             manylinux-version: "_1_1"
     env:
       BUILD_COMMIT: HEAD
-      PLAT: ${{ matrix.arch == 'x86' && 'x86_64' || matrix.os == 'macos-latest' && 'arm64' || 'aarch64' }}
+      PLAT: ${{ matrix.arch == 'x86' && 'x86_64' || matrix.os-type == 'macos' && 'arm64' || 'aarch64' }}
       MB_PYTHON_VERSION: ${{ matrix.python }}
       TRAVIS_OS_NAME: ${{ matrix.os-name }}
       MB_ML_VER: ${{ matrix.manylinux-version }}
