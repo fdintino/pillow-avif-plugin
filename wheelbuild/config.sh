@@ -400,6 +400,16 @@ function append_licenses {
 function pre_build {
     echo "::endgroup::"
 
+    if [ -e /etc/yum.repos.d ]; then
+        sed -i -e '/^mirrorlist=http:\/\/mirrorlist.centos.org\// { s/^/#/ ; T }' \
+            -e '{ s/#baseurl=/baseurl=/ ; s/mirror\.centos\.org/vault.centos.org/ }' \
+            /etc/yum.repos.d/CentOS-*.repo
+        if [ "$PLAT" == "aarch64" ]; then
+            sed -i -e '{ s/vault\.centos\.org\/centos/vault.centos.org\/altarch/ }' \
+                /etc/yum.repos.d/CentOS-*.repo
+        fi
+    fi
+
     append_licenses
     ensure_sudo
     ensure_openssl
