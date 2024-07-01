@@ -104,7 +104,7 @@ jobs:
         with:
           repository: multi-build/multibuild
           path: multibuild
-          ref: ${{ (matrix.python == '3.11' || matrix.python == '3.12') && '452dd2d1705f6b2375369a6570c415beb3163f70' || '34e970c4bc448b73af0127615fc4583b4f247369' }}
+          ref: ${{ (matrix.python == '3.11' || matrix.python == '3.12' || matrix.os == 'macos-latest') && '88146e74ebc86baf97b6fec448ef766d64326582' || '34e970c4bc448b73af0127615fc4583b4f247369' }}
 
       - uses: actions/setup-python@v4
         with:
