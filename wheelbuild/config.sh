@@ -124,6 +124,8 @@ function install_sccache {
     group_start "Install sccache"
     if [ -n "$IS_MACOS" ]; then
         brew install sccache
+        export USE_SCCACHE=1
+        export SCCACHE_DIR=$PWD/sccache
     elif [ ! -e /usr/local/bin/sccache ]; then
         local base_url="https://github.com/mozilla/sccache/releases/download/v$SCCACHE_VERSION"
         local archive_name="sccache-v${SCCACHE_VERSION}-${PLAT}-unknown-linux-musl"
@@ -408,6 +410,12 @@ function pre_build {
             sed -i -e '{ s/vault\.centos\.org\/centos/vault.centos.org\/altarch/ }' \
                 /etc/yum.repos.d/CentOS-*.repo
         fi
+    fi
+
+    if [ -n "$IS_MACOS" ]; then
+        sudo mkdir -p /usr/local/lib
+        sudo mkdir -p /usr/local/bin
+        sudo chown -R $(id -u):$(id -g) /usr/local ||:
     fi
 
     append_licenses
