@@ -3,10 +3,6 @@ name: Wheels
 on:
   pull_request:
   push:
-    branches:
-      - main
-    tags:
-      - '*'
 env:
   REPO_DIR: pillow-avif-plugin
   BUILD_DEPENDS: ""
