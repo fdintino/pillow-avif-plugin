@@ -273,6 +273,11 @@ EOF
 
     group_end
 
+    if [[ $MB_ML_VER == "2010" ]]; then
+        fetch_unpack https://storage.googleapis.com/aom-releases/libaom-3.8.1.tar.gz
+        mv libaom-3.8.1 libavif-$LIBAVIF_VERSION/ext/aom
+    fi
+
     group_start "Build libavif"
 
     mkdir -p libavif-$LIBAVIF_VERSION/build
