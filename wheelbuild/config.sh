@@ -417,6 +417,11 @@ function pre_build {
         fi
     fi
 
+    if [ "$MB_ML_VER" == "2010" ]; then
+        yum install -y devtoolset-9-gcc-gfortran yum install devtoolset-9-gcc-c++
+        export PATH=/opt/rh/devtoolset-9/root/usr/bin:$PATH
+    fi
+
     if [ -n "$IS_MACOS" ]; then
         sudo mkdir -p /usr/local/lib
         sudo mkdir -p /usr/local/bin
