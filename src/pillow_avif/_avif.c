@@ -46,7 +46,7 @@ typedef struct {
 
 static PyTypeObject AvifDecoder_Type;
 
-static int max_threads = 0;
+static int default_max_threads = 0;
 
 static void
 init_max_threads(void) {
@@ -85,7 +85,7 @@ init_max_threads(void) {
         goto error;
     }
 
-    max_threads = (int)num_cpus;
+    default_max_threads = (int)num_cpus;
 
 done:
     Py_XDECREF(os);
@@ -321,6 +321,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
     int quality = 75;
     int speed = 8;
     int exif_orientation = 0;
+    int max_threads = default_max_threads;
     PyObject *icc_bytes;
     PyObject *exif_bytes;
     PyObject *xmp_bytes;
@@ -336,7 +337,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "IIsiiiissiiOOSSiSO",
+            "IIsiiiiissiiOOSSiSO",
             &width,
             &height,
             &subsampling,
@@ -344,6 +345,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
             &qmax,
             &quality,
             &speed,
+            &max_threads,
             &codec,
             &range,
             &tile_rows_log2,
@@ -445,7 +447,10 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
         encoder = avifEncoderCreate();
 
         if (max_threads == 0) {
-            init_max_threads();
+            if (default_max_threads == 0) {
+                init_max_threads();
+            }
+            max_threads = default_max_threads;
         }
 
         int is_aom_encode = strcmp(codec, "aom") == 0 ||
@@ -777,10 +782,10 @@ AvifDecoderNew(PyObject *self_, PyObject *args) {
 
     self->decoder = avifDecoderCreate();
 #if AVIF_VERSION >= 80400
-    if (max_threads == 0) {
+    if (default_max_threads == 0) {
         init_max_threads();
     }
-    self->decoder->maxThreads = max_threads;
+    self->decoder->maxThreads = default_max_threads;
 #endif
     self->decoder->codecChoice = codec;
 
