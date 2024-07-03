@@ -14,8 +14,8 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.python }} ${{ matrix.os-name }} ${{ matrix.arch == 'x86' && 'x86_64' || matrix.os == 'macos-latest' && 'arm64' || 'aarch64' }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.python }} ${{ matrix.os-name }} ${{ matrix.arch == 'x86' && 'x86_64' || matrix.os-type == 'macos' && 'arm64' || 'aarch64' }}
+    runs-on: ${{ matrix.os-type == 'ubuntu' && 'ubuntu-latest' || (matrix.os-type == 'macos' && (matrix.arch == 'x86' || matrix.python == '2.7' || matrix.python == '3.7')) && 'macos-13' || 'macos-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -23,7 +23,7 @@ jobs:
         python: [ "2.7", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12" ]
         arch: [ "x86", "arm" ]
         manylinux-version: [ "2014" ]
-        mb-ml-libc: [ "manylinux" ]
+        mb-ml-libc: [ "manylinux", "musllinux" ]
         exclude:
           - python: "2.7"
             os-type: "ubuntu"
@@ -35,22 +35,16 @@ jobs:
             os-type: "ubuntu"
             arch: "arm"
           - python: "2.7"
-            os-type: "macos"
-            arch: "arm"
+            mb-ml-libc: "musllinux"
           - python: "3.7"
-            os-type: "macos"
-            arch: "arm"
+            mb-ml-libc: "musllinux"
+          - arch: "arm"
+            mb-ml-libc: "musllinux"
+          - os-type: "macos"
+            mb-ml-libc: "musllinux"
         include:
           - os-type: "macos"
-            os: "macos-13"
-            python: "2.7"
-            arch: "arm"
-            os-name: "osx"
-          - os-type: "macos"
-            os: "macos-13"
-            python: "3.7"
-            arch: "arm"
-            os-name: "osx"
+            os-name: "macOS"
           - os-type: "ubuntu"
             os: "ubuntu-latest"
             python: "2.7"
@@ -63,59 +57,19 @@ jobs:
             arch: "x86"
             manylinux-version: "2010"
             os-name: "manylinux2010"
-          - os-type: "macos"
-            arch: "arm"
-            os: "macos-latest"
-            os-name: "osx"
-          - os-type: "macos"
-            arch: "x86"
-            os: "macos-13"
-            os-name: "osx"
           - os-type: "ubuntu"
             os: "ubuntu-latest"
             manylinux-version: "2014"
             os-name: "manylinux2014"
-          - python: "3.8"
-            arch: "x86"
-            mb-ml-libc: "musllinux"
+          - mb-ml-libc: "musllinux"
             os-type: "ubuntu"
-            os: "ubuntu-latest"
             os-name: "musllinux"
-            manylinux-version: "_1_1"
-          - python: "3.9"
-            arch: "x86"
-            mb-ml-libc: "musllinux"
-            os-type: "ubuntu"
-            os: "ubuntu-latest"
-            os-name: "musllinux"
-            manylinux-version: "_1_1"
-          - python: "3.10"
-            arch: "x86"
-            mb-ml-libc: "musllinux"
-            os-type: "ubuntu"
-            os: "ubuntu-latest"
-            os-name: "musllinux"
-            manylinux-version: "_1_1"
-          - python: "3.11"
-            arch: "x86"
-            mb-ml-libc: "musllinux"
-            os-type: "ubuntu"
-            os: "ubuntu-latest"
-            os-name: "musllinux"
-            manylinux-version: "_1_1"
-          - python: "3.12"
-            arch: "x86"
-            mb-ml-libc: "musllinux"
-            os-type: "ubuntu"
-            os: "ubuntu-latest"
-            os-name: "musllinux"
-            manylinux-version: "_1_1"
     env:
       BUILD_COMMIT: HEAD
-      PLAT: ${{ matrix.arch == 'x86' && 'x86_64' || matrix.os-type == 'macos' && 'arm64' || 'aarch64' }}
+      PLAT: ${{ matrix.arch == 'x86' && 'x86_64' || (matrix.os-type == 'macos' && 'arm64') || 'aarch64' }}
       MB_PYTHON_VERSION: ${{ matrix.python }}
       TRAVIS_OS_NAME: ${{ matrix.os-name }}
-      MB_ML_VER: ${{ matrix.manylinux-version }}
+      MB_ML_VER: ${{ matrix.mb-ml-libc == 'musllinux' && '_1_1' || matrix.manylinux-version }}
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.arch == 'arm' && '11.0' || '10.10' }}
       MB_ML_LIBC: ${{ matrix.mb-ml-libc }}
     steps:
@@ -134,7 +88,7 @@ jobs:
         with:
           repository: multi-build/multibuild
           path: multibuild
-          ref: ${{ (matrix.python == '3.11' || matrix.python == '3.12' || matrix.os == 'macos-latest') && '88146e74ebc86baf97b6fec448ef766d64326582' || '34e970c4bc448b73af0127615fc4583b4f247369' }}
+          ref: ${{ (matrix.python == '3.11' || matrix.python == '3.12' || matrix.os == 'macos-latest' || (env.PLAT == 'arm64' && matrix.python != '2.7')) && '88146e74ebc86baf97b6fec448ef766d64326582' || '34e970c4bc448b73af0127615fc4583b4f247369' }}
 
       - uses: actions/setup-python@v4
         with:
