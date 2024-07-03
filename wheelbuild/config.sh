@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=88d3dccda111f6ccbcccd925179f67e7d6fdf4ff
+LIBAVIF_VERSION=e10e6d98e6d1dbcdd409859a924d1b607a1e06dc
 RAV1E_VERSION=p20231003
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
@@ -124,6 +124,8 @@ function install_sccache {
     group_start "Install sccache"
     if [ -n "$IS_MACOS" ]; then
         brew install sccache
+        export USE_SCCACHE=1
+        export SCCACHE_DIR=$PWD/sccache
     elif [ ! -e /usr/local/bin/sccache ]; then
         local base_url="https://github.com/mozilla/sccache/releases/download/v$SCCACHE_VERSION"
         local archive_name="sccache-v${SCCACHE_VERSION}-${PLAT}-unknown-linux-musl"
@@ -219,7 +221,9 @@ function build_libavif {
     LIBAVIF_CMAKE_FLAGS=()
 
     if [ -n "$IS_MACOS" ]; then
-        brew remove --ignore-dependencies webp jpeg-xl aom composer gd imagemagick libavif libheif php
+        for pkg in webp jpeg-xl aom composer gd imagemagick libavif libheif php; do
+            brew remove --ignore-dependencies $pkg ||:
+        done
     fi
     which cmake
     cmake --version
@@ -268,6 +272,11 @@ EOF
         "libavif-$LIBAVIF_VERSION.tar.gz"
 
     group_end
+
+    if [[ $MB_ML_VER == "2010" ]]; then
+        fetch_unpack https://storage.googleapis.com/aom-releases/libaom-3.8.1.tar.gz
+        mv libaom-3.8.1 libavif-$LIBAVIF_VERSION/ext/aom
+    fi
 
     group_start "Build libavif"
 
@@ -397,6 +406,27 @@ function append_licenses {
 
 function pre_build {
     echo "::endgroup::"
+
+    if [ -e /etc/yum.repos.d ]; then
+        sed -i -e '/^mirrorlist=http:\/\/mirrorlist.centos.org\// { s/^/#/ ; T }' \
+            -e '{ s/#baseurl=/baseurl=/ ; s/mirror\.centos\.org/vault.centos.org/ }' \
+            /etc/yum.repos.d/CentOS-*.repo
+        if [ "$PLAT" == "aarch64" ]; then
+            sed -i -e '{ s/vault\.centos\.org\/centos/vault.centos.org\/altarch/ }' \
+                /etc/yum.repos.d/CentOS-*.repo
+        fi
+    fi
+
+    if [ "$MB_ML_VER" == "2010" ]; then
+        yum install -y devtoolset-9-gcc-gfortran yum install devtoolset-9-gcc-c++
+        export PATH=/opt/rh/devtoolset-9/root/usr/bin:$PATH
+    fi
+
+    if [ -n "$IS_MACOS" ]; then
+        sudo mkdir -p /usr/local/lib
+        sudo mkdir -p /usr/local/bin
+        sudo chown -R $(id -u):$(id -g) /usr/local ||:
+    fi
 
     append_licenses
     ensure_sudo
