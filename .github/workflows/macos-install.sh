@@ -2,7 +2,12 @@
 
 set -e
 
-brew reinstall cmake
+# See https://github.com/actions/runner-images/issues/9471 for why we have
+# brew unlink and brew link commands here
+brew unlink cmake || true
+brew reinstall cmake || true
+brew link --overwrite cmake
+
 brew install dav1d aom rav1e
 
 if [ "$GHA_PYTHON_VERSION" == "2.7" ]; then
