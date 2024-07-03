@@ -16,6 +16,7 @@ except ImportError:
 # to Image.open (see https://github.com/python-pillow/Pillow/issues/569)
 DECODE_CODEC_CHOICE = "auto"
 CHROMA_UPSAMPLING = "auto"
+DEFAULT_MAX_THREADS = 0
 
 _VALID_AVIF_MODES = {"RGB", "RGBA"}
 
@@ -138,7 +139,7 @@ def _save(im, fp, filename, save_all=False):
     duration = info.get("duration", 0)
     subsampling = info.get("subsampling", "4:2:0")
     speed = info.get("speed", 6)
-    max_threads = info.get("max_threads", 0)
+    max_threads = info.get("max_threads", DEFAULT_MAX_THREADS)
     codec = info.get("codec", "auto")
     range_ = info.get("range", "full")
     tile_rows_log2 = info.get("tile_rows", 0)
