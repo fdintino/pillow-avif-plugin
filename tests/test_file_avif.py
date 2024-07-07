@@ -579,6 +579,11 @@ class TestFileAvif:
 
         assert_image_similar(im_png.convert("RGBA"), Image.open(buf_out), 1)
 
+    def test_decoder_strict_flags(self):
+        # This would fail if full avif strictFlags were enabled
+        with Image.open("%s/tests/images/chimera-missing-pixi.avif" % CURR_DIR) as im:
+            assert im.size == (480, 270)
+
 
 class TestAvifAnimation:
     @contextmanager

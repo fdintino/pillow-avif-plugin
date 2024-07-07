@@ -791,6 +791,14 @@ AvifDecoderNew(PyObject *self_, PyObject *args) {
     }
     self->decoder->maxThreads = max_threads;
 #endif
+#if AVIF_VERSION >= 90200
+    // Turn off libavif's 'clap' (clean aperture) property validation.
+    self->decoder->strictFlags &= ~AVIF_STRICT_CLAP_VALID;
+    // Allow the PixelInformationProperty ('pixi') to be missing in AV1 image
+    // items. libheif v1.11.0 and older does not add the 'pixi' item property to
+    // AV1 image items.
+    self->decoder->strictFlags &= ~AVIF_STRICT_PIXI_REQUIRED;
+#endif
     self->decoder->codecChoice = codec;
 
     avifDecoderSetIOMemory(
