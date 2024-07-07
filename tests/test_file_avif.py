@@ -11,7 +11,7 @@ except ImportError:
 
 import pytest
 
-from PIL import Image
+from PIL import Image, ImageDraw
 from pillow_avif import AvifImagePlugin
 
 from .helper import (
@@ -564,6 +564,20 @@ class TestFileAvif:
                     pass
         finally:
             AvifImagePlugin.CHROMA_UPSAMPLING = "auto"
+
+    def test_p_mode_transparency(self):
+        im = Image.new("P", size=(64, 64))
+        draw = ImageDraw.Draw(im)
+        draw.rectangle(xy=[(0, 0), (32, 32)], fill=255)
+        draw.rectangle(xy=[(32, 32), (64, 64)], fill=255)
+
+        buf_png = BytesIO()
+        im.save(buf_png, format="PNG", transparency=0)
+        im_png = Image.open(buf_png)
+        buf_out = BytesIO()
+        im_png.save(buf_out, format="AVIF", quality=100)
+
+        assert_image_similar(im_png.convert("RGBA"), Image.open(buf_out), 1)
 
 
 class TestAvifAnimation:

@@ -233,6 +233,10 @@ def _save(im, fp, filename, save_all=False):
                         "A" in ims.mode
                         or "a" in ims.mode
                         or (ims.mode == "P" and "A" in ims.im.getpalettemode())
+                        or (
+                            ims.mode == "P"
+                            and ims.info.get("transparency", None) is not None
+                        )
                     )
                     rawmode = "RGBA" if alpha else "RGB"
                     frame = ims.convert(rawmode)
