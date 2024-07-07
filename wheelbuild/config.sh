@@ -227,12 +227,14 @@ function build_libavif {
     fi
     which cmake
     cmake --version
-    if [ "$PLAT" == "x86_64" ]; then
-        if [ -n "$IS_MACOS" ]; then
-            LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
-        elif [[ "$MB_ML_VER" != "1" ]]; then
+    if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
+        # SVT-AV1 NEON intrinsics require macOS 14
+        local macos_ver==$(sw_vers --productVersion | sed 's/\.[0-9]*//')
+        if [ "$macos_ver" -gt "13" ]; then
             LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
         fi
+    elif [ "$MB_ML_VER" != "1" ]; then
+        LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
     fi
 
     build_rav1e
