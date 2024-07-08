@@ -5,7 +5,7 @@ CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
 LIBAVIF_VERSION=e10e6d98e6d1dbcdd409859a924d1b607a1e06dc
-RAV1E_VERSION=p20231003
+RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
@@ -190,19 +190,19 @@ function build_rav1e {
     group_start "Build rav1e"
 
     if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
-        librav1e_tgz=librav1e-macos-aarch64.tar.gz
+        librav1e_tgz=librav1e-${RAV1E_VERSION}-macos-aarch64.tar.gz
     elif [ -n "$IS_MACOS" ]; then
-        librav1e_tgz=librav1e-macos.tar.gz
+        librav1e_tgz=librav1e-${RAV1E_VERSION}-macos.tar.gz
     elif [ "$PLAT" == "aarch64" ]; then
-        librav1e_tgz=librav1e-linux-aarch64.tar.gz
+        librav1e_tgz=librav1e-${RAV1E_VERSION}-linux-aarch64.tar.gz
     elif [ "$PLAT" == "i686" ]; then
-        librav1e_tgz=librav1e-linux-i686.tar.gz
+        librav1e_tgz=librav1e-${RAV1E_VERSION}-linux-i686.tar.gz
     else
-        librav1e_tgz=librav1e-linux-generic.tar.gz
+        librav1e_tgz=librav1e-${RAV1E_VERSION}-linux-generic.tar.gz
     fi
 
     curl -sLo - \
-        https://github.com/xiph/rav1e/releases/download/$RAV1E_VERSION/$librav1e_tgz \
+        https://github.com/xiph/rav1e/releases/download/v$RAV1E_VERSION/$librav1e_tgz \
         | tar -C $BUILD_PREFIX --exclude LICENSE -zxf -
 
     if [ ! -n "$IS_MACOS" ]; then
