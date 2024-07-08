@@ -166,10 +166,10 @@ DEPS = {
     },
     "rav1e": {
         "url": (
-            "https://github.com/xiph/rav1e/releases/download/p20231003/"
-            "rav1e-windows-msvc-generic.zip"
+            "https://github.com/xiph/rav1e/releases/download/v0.7.1/"
+            "rav1e-0.7.1-windows-msvc-generic.zip"
         ),
-        "filename": "rav1e-windows-msvc-generic.zip",
+        "filename": "rav1e-0.7.1-windows-msvc-generic.zip",
         "dir": "rav1e-windows-msvc-sdk",
         "license": "LICENSE",
         "build": [
@@ -181,10 +181,10 @@ DEPS = {
     "libavif": {
         "url": (
             "https://github.com/fdintino/libavif/archive/"
-            "88d3dccda111f6ccbcccd925179f67e7d6fdf4ff.zip"
+            "e10e6d98e6d1dbcdd409859a924d1b607a1e06dc.zip"
         ),
-        "filename": "libavif-88d3dccda111f6ccbcccd925179f67e7d6fdf4ff.zip",
-        "dir": "libavif-88d3dccda111f6ccbcccd925179f67e7d6fdf4ff",
+        "filename": "libavif-e10e6d98e6d1dbcdd409859a924d1b607a1e06dc.zip",
+        "dir": "libavif-e10e6d98e6d1dbcdd409859a924d1b607a1e06dc",
         "license": "LICENSE",
         "build": [
             cmd_mkdir("build.pillow"),
