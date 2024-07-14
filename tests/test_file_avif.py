@@ -584,6 +584,18 @@ class TestFileAvif:
         with Image.open("%s/tests/images/chimera-missing-pixi.avif" % CURR_DIR) as im:
             assert im.size == (480, 270)
 
+    @skip_unless_avif_encoder("aom")
+    def test_aom_optimizations(self):
+        im = hopper("RGB")
+        buf = BytesIO()
+        im.save(buf, format="AVIF", codec="aom", speed=1)
+
+    @skip_unless_avif_encoder("svt")
+    def test_svt_optimizations(self):
+        im = hopper("RGB")
+        buf = BytesIO()
+        im.save(buf, format="AVIF", codec="svt", speed=1)
+
 
 class TestAvifAnimation:
     @contextmanager

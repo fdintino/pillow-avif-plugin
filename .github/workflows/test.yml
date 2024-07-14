@@ -67,7 +67,6 @@ jobs:
           ${{ env.LIBAVIF_VERSION }}-${{ hashFiles('.github/workflows/*.sh', '.github/workflows/test.yml', 'depends/*') }}-${{ matrix.os }}
 
     - name: Install nasm
-      if: steps.build-cache.outputs.cache-hit != 'true'
       uses: ilammy/setup-nasm@v1
       with:
         version: 2.15.05

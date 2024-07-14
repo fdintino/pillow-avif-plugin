@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=e10e6d98e6d1dbcdd409859a924d1b607a1e06dc
+LIBAVIF_VERSION=02fc53e73d68dccacc54ce543b1be1e9b3236495
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
@@ -229,7 +229,7 @@ function build_libavif {
     cmake --version
     if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
         # SVT-AV1 NEON intrinsics require macOS 14
-        local macos_ver==$(sw_vers --productVersion | sed 's/\.[0-9]*//')
+        local macos_ver=$(sw_vers --productVersion | sed 's/\.[0-9]*//')
         if [ "$macos_ver" -gt "13" ]; then
             LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
         fi
@@ -270,7 +270,7 @@ EOF
     group_start "Download libavif source"
 
     fetch_unpack \
-        "https://github.com/AOMediaCodec/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
+        "https://github.com/fdintino/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
         "libavif-$LIBAVIF_VERSION.tar.gz"
 
     group_end
