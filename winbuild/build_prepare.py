@@ -181,10 +181,10 @@ DEPS = {
     "libavif": {
         "url": (
             "https://github.com/fdintino/libavif/archive/"
-            "02fc53e73d68dccacc54ce543b1be1e9b3236495.zip"
+            "34659b77b8cd897a71bb5bb0ca7d604bbe1eaf6a.zip"
         ),
-        "filename": "libavif-02fc53e73d68dccacc54ce543b1be1e9b3236495.zip",
-        "dir": "libavif-02fc53e73d68dccacc54ce543b1be1e9b3236495",
+        "filename": "libavif-34659b77b8cd897a71bb5bb0ca7d604bbe1eaf6a.zip",
+        "dir": "libavif-34659b77b8cd897a71bb5bb0ca7d604bbe1eaf6a",
         "license": "LICENSE",
         "build": [
             cmd_mkdir("build.pillow"),
