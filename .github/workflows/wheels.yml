@@ -138,15 +138,19 @@ jobs:
           sudo chown -R $(whoami):$(id -ng) ccache ||:
           sudo chown -R $(whoami):$(id -ng) sccache ||:
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: wheels
-          path: wheelhouse/*.whl
+      - name: run dsymutil
+        run: |
+            dsymutil wheelhouse/avifenc
 
       - uses: actions/upload-artifact@v3
         with:
           name: wheels
-          path: wheelhouse/avifenc
+          path: wheelhouse/*
+
+      # - uses: actions/upload-artifact@v3
+      #   with:
+      #     name: path
+      #     path: /Users/runner/work/pillow-avif-plugin/pillow-avif-plugin
   
 
   windows:
