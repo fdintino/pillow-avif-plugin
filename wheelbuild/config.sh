@@ -295,11 +295,13 @@ EOF
             -DAVIF_CODEC_RAV1E=ON -DCMAKE_MODULE_PATH=/tmp/cmake/Modules \
             -DAVIF_CODEC_AOM=LOCAL \
             -DAVIF_CODEC_DAV1D=LOCAL \
+            -DAVIF_BUILD_APPS=ON \
             -DENABLE_NASM=ON \
             '-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG -g' \
             '-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -g' \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
-        && ninja -v install/strip)
+        && ninja -v install \
+        && cp avifenc ../../wheelhouse)
 
     group_end
 }

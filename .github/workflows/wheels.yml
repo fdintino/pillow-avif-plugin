@@ -143,6 +143,12 @@ jobs:
           name: wheels
           path: wheelhouse/*.whl
 
+      - uses: actions/upload-artifact@v3
+        with:
+          name: wheels
+          path: wheelhouse/avifenc
+  
+
   windows:
     runs-on: windows-2019
     if: false
