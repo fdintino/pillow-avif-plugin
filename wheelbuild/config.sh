@@ -288,7 +288,7 @@ EOF
         && cmake .. \
             -G "Ninja" \
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF \
             -DAVIF_LIBSHARPYUV=LOCAL \
             -DAVIF_LIBYUV=LOCAL \
