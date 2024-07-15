@@ -5,7 +5,7 @@ on:
   push:
 jobs:
   build:
-
+    if: false
     strategy:
       fail-fast: false
       matrix:

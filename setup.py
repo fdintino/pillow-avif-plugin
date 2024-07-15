@@ -53,6 +53,8 @@ setup(
             ["src/pillow_avif/_avif.c"],
             depends=["avif/avif.h"],
             libraries=libraries,
+            extra_compile_args=["-O0", "-g"],
+            extra_link_args=["-O0", "-g"],
         ),
     ],
     package_data={"": ["README.rst"]},
