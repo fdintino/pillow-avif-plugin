@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=34659b77b8cd897a71bb5bb0ca7d604bbe1eaf6a
+LIBAVIF_VERSION=98324950529fc082ff9a392219e174d254fba2b5
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
@@ -296,6 +296,8 @@ EOF
             -DAVIF_CODEC_AOM=LOCAL \
             -DAVIF_CODEC_DAV1D=LOCAL \
             -DENABLE_NASM=ON \
+            '-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG -g' \
+            '-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -g' \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && ninja -v install/strip)
 
