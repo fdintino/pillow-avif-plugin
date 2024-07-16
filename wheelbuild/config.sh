@@ -23,6 +23,10 @@ if [ -n "$IS_MACOS" ] && [ -n "$MACOSX_DEPLOYMENT_TARGET" ]; then
     LDFLAGS="${LDFLAGS} -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
 fi
 
+if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
+    export LDFLAGS="${LDFLAGS} -ld64"
+fi
+
 call_and_restore_trace() {
     local rc
     local force_trace
@@ -365,9 +369,8 @@ EOF
             -DAVIF_CODEC_DAV1D=LOCAL \
             -DAVIF_BUILD_APPS=ON \
             -DENABLE_NASM=ON \
-            '-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG -g -march=armv8-a+crc+crypto+dotprod+i8mm -mcpu=generic' \
-            '-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -g -march=armv8-a+crc+crypto+dotprod+i8mm -mcpu=generic' \
-            '-DCMAKE_EXE_LINKER_FLAGS=-march=armv8-a+crc+crypto+dotprod+i8mm -target arm64-apple-macos11 -no-pie -ld64' \
+            '-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG -g' \
+            '-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -g' \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && ninja -v install \
         && cp avifenc ../../wheelhouse)
