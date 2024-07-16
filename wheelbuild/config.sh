@@ -367,7 +367,7 @@ EOF
             -DENABLE_NASM=ON \
             '-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG -g -march=armv8-a+crc+crypto+dotprod+i8mm -mcpu=generic' \
             '-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -g -march=armv8-a+crc+crypto+dotprod+i8mm -mcpu=generic' \
-            '-DCMAKE_EXE_LINKER_FLAGS=-march=armv8-a+crc+crypto+dotprod+i8mm -target arm64-apple-macos11 -no-pie' \
+            '-DCMAKE_EXE_LINKER_FLAGS=-march=armv8-a+crc+crypto+dotprod+i8mm -target arm64-apple-macos11 -no-pie -ld64' \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && ninja -v install \
         && cp avifenc ../../wheelhouse)
