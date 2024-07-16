@@ -270,7 +270,7 @@ EOF
     group_start "Download libavif source"
 
     fetch_unpack \
-        "https://github.com/AOMediaCodec/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
+        "https://github.com/fdintino/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
         "libavif-$LIBAVIF_VERSION.tar.gz"
 
     group_end
@@ -297,13 +297,16 @@ EOF
             -DAVIF_CODEC_DAV1D=LOCAL \
             -DAVIF_BUILD_APPS=ON \
             -DENABLE_NASM=ON \
-            -DAOM_EXTRA_C_FLAGS=-O2 \
-            -DAOM_EXTRA_CXX_FLAGS=-O2 \
+            '-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG -g' \
+            '-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -g' \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && ninja -v install \
         && cp avifenc ../../wheelhouse)
 
     group_end
+    # '-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG -g -target arm64-apple-macos11 -mtune=apple-m1 -mcpu=generic' \
+    # '-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -g -target arm64-apple-macos11 -mtune=apple-m1 -mcpu=generic' \
+    # '-DCMAKE_EXE_LINKER_FLAGS=-target arm64-apple-macos11' \
 }
 
 function build_nasm {
