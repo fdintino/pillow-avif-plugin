@@ -180,11 +180,11 @@ DEPS = {
     },
     "libavif": {
         "url": (
-            "https://github.com/fdintino/libavif/archive/"
-            "02fc53e73d68dccacc54ce543b1be1e9b3236495.zip"
+            "https://github.com/AOMediaCodec/libavif/archive/"
+            "1a1c778f8e0b7ecdf3af9e59a6f33eb4d7d3900e.zip"
         ),
-        "filename": "libavif-02fc53e73d68dccacc54ce543b1be1e9b3236495.zip",
-        "dir": "libavif-02fc53e73d68dccacc54ce543b1be1e9b3236495",
+        "filename": "libavif-1a1c778f8e0b7ecdf3af9e59a6f33eb4d7d3900e.zip",
+        "dir": "libavif-1a1c778f8e0b7ecdf3af9e59a6f33eb4d7d3900e",
         "license": "LICENSE",
         "build": [
             cmd_mkdir("build.pillow"),
