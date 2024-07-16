@@ -138,9 +138,9 @@ jobs:
           sudo chown -R $(whoami):$(id -ng) ccache ||:
           sudo chown -R $(whoami):$(id -ng) sccache ||:
 
-      - name: run dsymutil
-        run: |
-            dsymutil wheelhouse/avifenc
+      # - name: run dsymutil
+      #   run: |
+      #       dsymutil wheelhouse/avifenc
 
       - uses: actions/upload-artifact@v3
         with:

@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=98324950529fc082ff9a392219e174d254fba2b5
+LIBAVIF_VERSION=e54b5c2908e74b5d7d090df53919f7ba52cd856f
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
@@ -270,7 +270,7 @@ EOF
     group_start "Download libavif source"
 
     fetch_unpack \
-        "https://github.com/fdintino/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
+        "https://github.com/AOMediaCodec/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
         "libavif-$LIBAVIF_VERSION.tar.gz"
 
     group_end
@@ -297,9 +297,8 @@ EOF
             -DAVIF_CODEC_DAV1D=LOCAL \
             -DAVIF_BUILD_APPS=ON \
             -DENABLE_NASM=ON \
-            '-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG -g -target arm64-apple-macos11 -mtune=apple-m1 -mcpu=generic' \
-            '-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -g -target arm64-apple-macos11 -mtune=apple-m1 -mcpu=generic' \
-            '-DCMAKE_EXE_LINKER_FLAGS=-target arm64-apple-macos11' \
+            -DAOM_EXTRA_C_FLAGS=-O2 \
+            -DAOM_EXTRA_CXX_FLAGS=-O2 \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && ninja -v install \
         && cp avifenc ../../wheelhouse)
