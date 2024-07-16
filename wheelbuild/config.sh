@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=02fc53e73d68dccacc54ce543b1be1e9b3236495
+LIBAVIF_VERSION=1a1c778f8e0b7ecdf3af9e59a6f33eb4d7d3900e
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
@@ -21,6 +21,13 @@ alias trace_restore='{ [ $trace_enabled -eq 1 ] && trace_on || trace_off; } 2>/d
 if [ -n "$IS_MACOS" ] && [ -n "$MACOSX_DEPLOYMENT_TARGET" ]; then
     CFLAGS="${CFLAGS} -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
     LDFLAGS="${LDFLAGS} -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
+fi
+
+# Temporarily use old linker on macOS arm64. This fixes a bizarre bug where
+# an invalid instruction is being inserted into the middle of the libaom
+# function compute_stats_win5_neon
+if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
+    export LDFLAGS="${LDFLAGS} -ld64"
 fi
 
 call_and_restore_trace() {
@@ -270,7 +277,7 @@ EOF
     group_start "Download libavif source"
 
     fetch_unpack \
-        "https://github.com/fdintino/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
+        "https://github.com/AOMediaCodec/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
         "libavif-$LIBAVIF_VERSION.tar.gz"
 
     group_end

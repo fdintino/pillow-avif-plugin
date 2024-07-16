@@ -40,8 +40,8 @@ echo "::group::Setup wheel installation"
 echo "::endgroup::"
 
 echo "::group::Test wheel"
-  if [ "$PLAT" == "arm64" ]; then
-    echo "Skipping test for Apple Silicon"
+  if [ "${PLAT}" == "arm64" ] && [ $(arch) != "arm64" ]; then
+    echo "Skipping tests for non-natively-built Apple Silicon wheel"
   elif [[ "$MB_ML_LIBC" == "musllinux" ]] && [[ "$MB_PYTHON_VERSION" != "3.11" ]]&& [[ "$MB_PYTHON_VERSION" != "3.11" ]]; then
     echo "Skipping tests for CI issue with musl python < 3.11"
   else
