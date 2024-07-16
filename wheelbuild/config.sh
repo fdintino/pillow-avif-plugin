@@ -217,6 +217,74 @@ function build_rav1e {
     group_end
 }
 
+function build_aom_macos_arm64 {
+    if [ -e aom-stamp ]; then return; fi
+
+    group_start "Build aom"
+
+    local cmake_flags=(\
+        -DAOM_TARGET_CPU=arm64 \
+        -DCMAKE_TOOLCHAIN_FILE=$CONFIG_DIR/toolchain-arm64-macos.cmake \
+        '-DCMAKE_C_FLAGS_RELEASE=-O2 -DNDEBUG' \
+        '-DCMAKE_CXX_FLAGS_RELEASE=-O2 -DNDEBUG' \
+    )
+
+    fetch_unpack \
+        https://storage.googleapis.com/aom-releases/libaom-$AOM_VERSION.tar.gz
+
+    if [ ! -n "$IS_MACOS" ] && [[ "$MB_ML_VER" == "1" ]]; then
+        (cd libaom-$AOM_VERSION \
+            && patch -p1 -i $CONFIG_DIR/aom-2.0.2-manylinux1.patch)
+    fi
+    if [ ! -n "$IS_MACOS" ]; then
+        cmake_flags+=("-DCMAKE_C_FLAGS=-fPIC")
+    elif [ "$PLAT" == "arm64" ]; then
+        cmake_flags+=(\
+            -DAOM_TARGET_CPU=arm64 \
+            -DCMAKE_TOOLCHAIN_FILE=$CONFIG_DIR/toolchain-arm64-macos.cmake \
+            '-DCMAKE_C_FLAGS_RELEASE=-O2 -DNDEBUG' \
+            '-DCMAKE_CXX_FLAGS_RELEASE=-O2 -DNDEBUG' \
+            )
+    fi
+    if [[ $(type -P ccache) ]]; then
+        cmake_flags+=(\
+            -DCMAKE_C_COMPILER_LAUNCHER=$(type -P ccache) \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=$(type -P ccache))
+    fi
+    if [ -n "$IS_ALPINE" ]; then
+        (cd libaom-$AOM_VERSION \
+            && patch -p1 -i $CONFIG_DIR/aom-fix-stack-size.patch)
+        extra_cmake_flags+=("-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,stack-size=2097152")
+    fi
+
+    mkdir libaom-$AOM_VERSION/build/work
+    (cd libaom-$AOM_VERSION/build/work \
+        && cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCONFIG_PIC=1 \
+            -DCMAKE_INSTALL_PREFIX="${BUILD_PREFIX}" \
+            -DCMAKE_INSTALL_LIBDIR=lib \
+            -DBUILD_SHARED_LIBS=0 \
+            -DENABLE_DOCS=0 \
+            -DENABLE_EXAMPLES=0 \
+            -DENABLE_TESTDATA=0 \
+            -DENABLE_TESTS=0 \
+            -DENABLE_TOOLS=0 \
+            -DAOM_TARGET_CPU=arm64 \
+            -DCMAKE_TOOLCHAIN_FILE=$CONFIG_DIR/toolchain-arm64-macos.cmake \
+            '-DCMAKE_C_FLAGS_RELEASE=-O2 -DNDEBUG' \
+            '-DCMAKE_CXX_FLAGS_RELEASE=-O2 -DNDEBUG' \
+            "${cmake_flags[@]}" \
+            ../.. \
+        && make install)
+
+    require_package aom
+
+    group_end
+    touch aom-stamp
+}
+
+
 function build_libavif {
     LIBAVIF_CMAKE_FLAGS=()
 
@@ -297,8 +365,9 @@ EOF
             -DAVIF_CODEC_DAV1D=LOCAL \
             -DAVIF_BUILD_APPS=ON \
             -DENABLE_NASM=ON \
-            '-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG -g' \
-            '-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -g' \
+            '-DCMAKE_C_FLAGS_RELEASE=-O3 -DNDEBUG -g -march=armv8-a+crc+crypto+dotprod+i8mm -mcpu=generic' \
+            '-DCMAKE_CXX_FLAGS_RELEASE=-O3 -DNDEBUG -g -march=armv8-a+crc+crypto+dotprod+i8mm -mcpu=generic' \
+            '-DCMAKE_EXE_LINKER_FLAGS=-march=armv8-a+crc+crypto+dotprod+i8mm -target arm64-apple-macos11 -no-pie' \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && ninja -v install \
         && cp avifenc ../../wheelhouse)
