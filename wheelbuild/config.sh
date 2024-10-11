@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=1a1c778f8e0b7ecdf3af9e59a6f33eb4d7d3900e
+LIBAVIF_VERSION=1.1.1
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
@@ -277,7 +277,7 @@ EOF
     group_start "Download libavif source"
 
     fetch_unpack \
-        "https://github.com/AOMediaCodec/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
+        "https://github.com/AOMediaCodec/libavif/archive/refs/tags/v$LIBAVIF_VERSION.tar.gz" \
         "libavif-$LIBAVIF_VERSION.tar.gz"
 
     group_end
@@ -451,13 +451,20 @@ function pre_build {
     install_ninja
     install_meson
 
+    if [[ -n "$IS_MACOS" ]]; then
+        # clear bash path cache for curl
+        hash -d curl
+    fi
+
     if [ -e $HOME/.cargo/env ]; then
         source $HOME/.cargo/env
     fi
 
     build_libavif
 
-    echo "::group::Build wheel"
+    if [ -z "$CIBW_ARCHS" ]; then
+        echo "::group::Build wheel"
+    fi
 }
 
 function run_tests {

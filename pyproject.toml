@@ -1,3 +1,9 @@
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+before-all = ".github/workflows/wheels-dependencies.sh"
+build-verbosity = 1
+test-command = "cd {project} && .github/workflows/wheels-test.sh"
+test-extras = "tests"
