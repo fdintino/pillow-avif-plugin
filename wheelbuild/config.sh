@@ -6,10 +6,14 @@ CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 ARCHIVE_SDIR=pillow-avif-plugin-depends
 LIBAVIF_VERSION=1a1c778f8e0b7ecdf3af9e59a6f33eb4d7d3900e
 RAV1E_VERSION=0.7.1
-CCACHE_VERSION=4.7.1
-SCCACHE_VERSION=0.3.0
+CCACHE_VERSION=4.10.2
+SCCACHE_VERSION=0.10.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
 export GITHUB_ACTIONS=1
+export PYTHON_EXE="${PYTHON_EXE:-python}"
+export REPO_DIR=$(dirname $CONFIG_DIR)
+
+export PLAT="${AUDITWHEEL_ARCH:-${CIBW_ARCHS:-${PLAT}}}"
 
 # Convenience functions to run shell commands suppressed from "set -x" tracing
 shopt -s expand_aliases
@@ -29,6 +33,9 @@ fi
 if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
     export LDFLAGS="${LDFLAGS} -ld64"
 fi
+
+mkdir -p "$BUILD_PREFIX/bin"
+export PATH="$PATH:$BUILD_PREFIX/bin"
 
 call_and_restore_trace() {
     local rc
@@ -96,7 +103,13 @@ function install_ccache {
 
     group_start "Install ccache"
     if [ -n "$IS_MACOS" ]; then
-        brew install ccache
+        local base_url="https://github.com/ccache/ccache/releases/download/v$CCACHE_VERSION"
+        local archive_name="ccache-${CCACHE_VERSION}-darwin"
+        fetch_unpack "${base_url}/${archive_name}.tar.gz"
+        if [ -e "$archive_name/ccache" ]; then
+            sudo cp "$archive_name/ccache" "/usr/local/bin/ccache"
+            sudo chmod +x /usr/local/bin/ccache
+        fi
         export CCACHE_CPP2=1
     elif [[ "$PLAT" == "x86_64" ]] && [[ $MB_ML_VER == "2014" ]]; then
         local base_url="https://github.com/ccache/ccache/releases/download/v$CCACHE_VERSION"
@@ -129,22 +142,33 @@ function install_sccache {
         return
     fi
     group_start "Install sccache"
-    if [ -n "$IS_MACOS" ]; then
-        brew install sccache
-        export USE_SCCACHE=1
-        export SCCACHE_DIR=$PWD/sccache
-    elif [ ! -e /usr/local/bin/sccache ]; then
-        local base_url="https://github.com/mozilla/sccache/releases/download/v$SCCACHE_VERSION"
+    local base_url="https://github.com/mozilla/sccache/releases/download/v$SCCACHE_VERSION"
+
+    if [ -n "$IS_MACOS" ] && [ ! -e /usr/local/bin/sccache ]; then
+        if [ "$PLAT" == "arm64" ]; then
+            local archive_name="sccache-v${SCCACHE_VERSION}-aarch64-apple-darwin"
+        else
+            local archive_name="sccache-v${SCCACHE_VERSION}-x86_64-apple-darwin"
+        fi
+        fetch_unpack "${base_url}/${archive_name}.tar.gz"
+        if [ -e "$archive_name/sccache" ]; then
+            mkdir -p "$BUILD_PREFIX/bin"
+            cp "$archive_name/sccache" "$BUILD_PREFIX/bin/sccache"
+            chmod +x $BUILD_PREFIX/bin/sccache
+            export USE_SCCACHE=1
+            export SCCACHE_DIR=$PWD/sccache
+        fi
+
+    elif [ ! -e $BUILD_PREFIX/bin/sccache ]; then
         local archive_name="sccache-v${SCCACHE_VERSION}-${PLAT}-unknown-linux-musl"
         fetch_unpack "${base_url}/${archive_name}.tar.gz"
         if [ -e "$archive_name/sccache" ]; then
-            cp "$archive_name/sccache" "/usr/local/bin/sccache"
-            chmod +x /usr/local/bin/sccache
+            mkdir -p "$BUILD_PREFIX/bin"
+            cp "$archive_name/sccache" "$BUILD_PREFIX/bin/sccache"
+            chmod +x $BUILD_PREFIX/bin/sccache
+            export USE_SCCACHE=1
+            export SCCACHE_DIR=$PWD/sccache
         fi
-    fi
-    if [ -e /usr/local/bin/sccache ]; then
-        export USE_SCCACHE=1
-        export SCCACHE_DIR=$PWD/sccache
     fi
     group_end
 }
@@ -155,21 +179,28 @@ function install_meson {
     install_ninja
 
     group_start "Install meson"
-    if [ -n "$IS_MACOS" ]; then
-        brew install meson
-    else
-        if [ "$MB_PYTHON_VERSION" == "2.7" ]; then
-            local python39_exe=$(cpython_path 3.9)/bin/python
-            $python39_exe -m pip install meson
-            local meson_exe=$(dirname $python39_exe)/meson
-            if [ "$(id -u)" != "0" ]; then
-                sudo ln -s $meson_exe /usr/local/bin
-            else
-                ln -s $meson_exe /usr/local/bin
-            fi
+
+    if [ -n "$IS_MACOS" ] && [ "$MB_PYTHON_VERSION" == "2.7" ]; then
+        if [[ "$(uname -m)" == "x86_64" ]]; then
+            HOMEBREW_PREFIX=/usr/local
         else
-            $PYTHON_EXE -m pip install meson
+            HOMEBREW_PREFIX=/opt/homebrew
         fi
+        $HOMEBREW_PREFIX/bin/brew install meson
+        if [ ! -e $BUILD_PREFIX/bin/meson ]; then
+            ln -s $HOMEBREW_PREFIX/bin/meson $BUILD_PREFIX/bin
+        fi
+    elif [ "$MB_PYTHON_VERSION" == "2.7" ]; then
+        local python39_exe=$(cpython_path 3.9)/bin/python
+        $python39_exe -m pip install meson
+        local meson_exe=$(dirname $python39_exe)/meson
+        if [ "$(id -u)" != "0" ]; then
+            sudo ln -s $meson_exe /usr/local/bin
+        else
+            ln -s $meson_exe /usr/local/bin
+        fi
+    else
+        $PYTHON_EXE -m pip install meson
     fi
     group_end
 
@@ -182,7 +213,15 @@ function install_ninja {
     group_start "Install ninja"
 
     if [ -n "$IS_MACOS" ]; then
-        brew install ninja
+        if [[ "$(uname -m)" == "x86_64" ]]; then
+            HOMEBREW_PREFIX=/usr/local
+        else
+            HOMEBREW_PREFIX=/opt/homebrew
+        fi
+        $HOMEBREW_PREFIX/bin/brew install ninja
+        if [ ! -e $BUILD_PREFIX/bin/ninja ]; then
+            ln -s $HOMEBREW_PREFIX/bin/ninja $BUILD_PREFIX/bin
+        fi
     else
         $PYTHON_EXE -m pip install ninja==1.11.1
         local ninja_exe=$(dirname $PYTHON_EXE)/ninja
@@ -194,8 +233,6 @@ function install_ninja {
 }
 
 function build_rav1e {
-    group_start "Build rav1e"
-
     if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
         librav1e_tgz=librav1e-${RAV1E_VERSION}-macos-aarch64.tar.gz
     elif [ -n "$IS_MACOS" ]; then
@@ -204,9 +241,13 @@ function build_rav1e {
         librav1e_tgz=librav1e-${RAV1E_VERSION}-linux-aarch64.tar.gz
     elif [ "$PLAT" == "i686" ]; then
         librav1e_tgz=librav1e-${RAV1E_VERSION}-linux-i686.tar.gz
-    else
+    elif [ "$PLAT" == "x86_64" ]; then
         librav1e_tgz=librav1e-${RAV1E_VERSION}-linux-generic.tar.gz
+    else
+        return
     fi
+
+    group_start "Build rav1e"
 
     curl -sLo - \
         https://github.com/xiph/rav1e/releases/download/v$RAV1E_VERSION/$librav1e_tgz \
@@ -236,7 +277,7 @@ function build_libavif {
     cmake --version
     if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
         # SVT-AV1 NEON intrinsics require macOS 14
-        local macos_ver=$(sw_vers --productVersion | sed 's/\.[0-9]*//')
+        local macos_ver=$(sw_vers --productVersion | sed 's/\.[.0-9]*//')
         if [ "$macos_ver" -gt "13" ]; then
             LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
         fi
@@ -247,16 +288,34 @@ function build_libavif {
     build_rav1e
 
     # Force libavif to treat system rav1e as if it were local
-    mkdir -p /tmp/cmake/Modules
-    cat <<EOF > /tmp/cmake/Modules/Findrav1e.cmake
-    add_library(rav1e::rav1e STATIC IMPORTED GLOBAL)
-    set_target_properties(rav1e::rav1e PROPERTIES
-        IMPORTED_LOCATION "$BUILD_PREFIX/lib/librav1e.a"
-        AVIF_LOCAL ON
-        INTERFACE_INCLUDE_DIRECTORIES "$BUILD_PREFIX/include/rav1e"
-    )
+    if [ -e $BUILD_PREFIX/lib/librav1e.a ]; then
+        mkdir -p /tmp/cmake/Modules
+        cat <<EOF > /tmp/cmake/Modules/Findrav1e.cmake
+        add_library(rav1e::rav1e STATIC IMPORTED GLOBAL)
+        set_target_properties(rav1e::rav1e PROPERTIES
+            IMPORTED_LOCATION "$BUILD_PREFIX/lib/librav1e.a"
+            AVIF_LOCAL ON
+            INTERFACE_INCLUDE_DIRECTORIES "$BUILD_PREFIX/include/rav1e"
+        )
 EOF
+        LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_RAV1E=ON -DCMAKE_MODULE_PATH=/tmp/cmake/Modules)
+    else
+        curl https://sh.rustup.rs -sSf | sh -s -- -y
+        . "$HOME/.cargo/env"
 
+        if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ] && [[ "$(uname -m)" != "arm64" ]]; then
+            # When cross-compiling to arm64 on macOS, install rust aarch64 target
+            rustup target add --toolchain stable-x86_64-apple-darwin aarch64-apple-darwin
+        fi
+
+        if [ -z "$IS_ALPINE" ] && [ -z "$SANITIZER" ] && [ -z "$IS_MACOS" ]; then
+            yum install -y perl
+            if [[ "$MB_ML_VER" == 2014 ]]; then
+                yum install -y perl-IPC-Cmd
+            fi
+        fi
+        LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_RAV1E=LOCAL)
+    fi
 
     if [ -n "$IS_MACOS" ]; then
         # Prevent cmake from using @rpath in install id, so that delocate can
@@ -276,30 +335,30 @@ EOF
 
     group_start "Download libavif source"
 
-    fetch_unpack \
+    local out_dir=$(fetch_unpack \
         "https://github.com/AOMediaCodec/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
-        "libavif-$LIBAVIF_VERSION.tar.gz"
+        "libavif-$LIBAVIF_VERSION.tar.gz")
 
     group_end
 
     if [[ $MB_ML_VER == "2010" ]]; then
         fetch_unpack https://storage.googleapis.com/aom-releases/libaom-3.8.1.tar.gz
-        mv libaom-3.8.1 libavif-$LIBAVIF_VERSION/ext/aom
+        mv libaom-3.8.1 $out_dir/ext/aom
     fi
 
     group_start "Build libavif"
 
-    mkdir -p libavif-$LIBAVIF_VERSION/build
+    mkdir -p $out_dir/build
 
-    (cd libavif-$LIBAVIF_VERSION/build \
+    (cd $out_dir/build \
         && cmake .. \
             -G "Ninja" \
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
+            -DCMAKE_INSTALL_LIBDIR=$BUILD_PREFIX/lib \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF \
             -DAVIF_LIBSHARPYUV=LOCAL \
             -DAVIF_LIBYUV=LOCAL \
-            -DAVIF_CODEC_RAV1E=ON -DCMAKE_MODULE_PATH=/tmp/cmake/Modules \
             -DAVIF_CODEC_AOM=LOCAL \
             -DAVIF_CODEC_DAV1D=LOCAL \
             -DENABLE_NASM=ON \
@@ -323,16 +382,12 @@ function build_nasm {
 
 function install_cmake {
     group_start "Install cmake"
-    if [ -n "$IS_MACOS" ]; then
-        brew reinstall cmake
+    if [[ "$MB_ML_VER" == "1" ]]; then
+        $PYTHON_EXE -m pip install 'cmake<3.23'
+    elif [ "$MB_PYTHON_VERSION" == "2.7" ]; then
+        $PYTHON_EXE -m pip install 'cmake==3.27.7'
     else
-        if [[ "$MB_ML_VER" == "1" ]]; then
-            $PYTHON_EXE -m pip install 'cmake<3.23'
-        elif [ "$MB_PYTHON_VERSION" == "2.7" ]; then
-            $PYTHON_EXE -m pip install 'cmake==3.27.7'
-        else
-            $PYTHON_EXE -m pip install cmake
-        fi
+        $PYTHON_EXE -m pip install cmake
     fi
     group_end
 }
@@ -378,7 +433,7 @@ function ensure_openssl {
     if [ ! -n "$IS_MACOS" ]; then
         group_start "Install openssl"
         if [ -n "$IS_ALPINE" ]; then
-            apk add libressl-dev openssl-dev
+            apk add openssl-dev
         elif [[ $MB_ML_VER == "_2_24" ]]; then
             apt-get install -y libssl-dev
         else
@@ -404,19 +459,26 @@ function ensure_sudo {
 
 function append_licenses {
     group_start "Append licenses"
-    for filename in $REPO_DIR/wheelbuild/dependency_licenses/*.txt; do
-      echo -e "\n\n----\n\n$(basename $filename | cut -f 1 -d '.')\n" | cat >> $REPO_DIR/LICENSE
-      cat $filename >> $REPO_DIR/LICENSE
+    local prefix=""
+    if [ -e "$REPO_DIR" ]; then
+        pushd $REPO_DIR
+    fi
+    for filename in wheelbuild/dependency_licenses/*.txt; do
+      echo -e "\n\n----\n\n$(basename $filename | cut -f 1 -d '.')\n" | cat >> LICENSE
+      cat $filename >> LICENSE
     done
-    echo -e "\n\n" | cat >> $REPO_DIR/LICENSE
-    cat $REPO_DIR/wheelbuild/dependency_licenses/PATENTS >> $REPO_DIR/LICENSE
+    echo -e "\n\n" | cat >> LICENSE
+    cat wheelbuild/dependency_licenses/PATENTS >> LICENSE
+    if [ -e "$REPO_DIR" ]; then
+        popd
+    fi
     group_end
 }
 
 function pre_build {
     echo "::endgroup::"
 
-    if [ -e /etc/yum.repos.d ]; then
+    if [ -e /etc/yum.repos.d/CentOS-Base.repo ]; then
         sed -i -e '/^mirrorlist=http:\/\/mirrorlist.centos.org\// { s/^/#/ ; T }' \
             -e '{ s/#baseurl=/baseurl=/ ; s/mirror\.centos\.org/vault.centos.org/ }' \
             /etc/yum.repos.d/CentOS-*.repo
@@ -444,12 +506,17 @@ function pre_build {
     install_sccache
     install_ccache
 
-    if [ "$PLAT" != "arm64" ] && [ "$PLAT" != "aarch64" ]; then
+    if [ "$PLAT" == "x86_64" ] || [ "$PLAT" == "i686" ]; then
         build_nasm
     fi
     install_cmake
     install_ninja
     install_meson
+
+    if [[ -n "$IS_MACOS" ]]; then
+        # clear bash path cache for curl
+        hash -d curl ||:
+    fi
 
     if [ -e $HOME/.cargo/env ]; then
         source $HOME/.cargo/env
@@ -457,7 +524,9 @@ function pre_build {
 
     build_libavif
 
-    echo "::group::Build wheel"
+    if [ -z "$CIBW_ARCHS" ]; then
+        echo "::group::Build wheel"
+    fi
 }
 
 function run_tests {

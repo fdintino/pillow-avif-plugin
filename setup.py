@@ -41,6 +41,14 @@ if sys.platform == "win32":
         ]
     )
 
+test_requires = [
+    "pytest",
+    "packaging",
+    "pytest-cov",
+    "test-image-results",
+    "pillow",
+]
+
 setup(
     name="pillow-avif-plugin",
     description="A pillow plugin that adds avif support via libavif",
@@ -64,6 +72,7 @@ setup(
     url="https://github.com/fdintino/pillow-avif-plugin/",
     download_url="https://github.com/fdintino/pillow-avif-plugin/releases",
     install_requires=[],
+    extras_require={"tests": test_requires},
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Web Environment",

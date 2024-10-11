@@ -1,3 +1,21 @@
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+before-all = ".github/workflows/wheels-dependencies.sh"
+build-verbosity = 1
+test-command = "cd {project} && .github/workflows/wheels-test.sh"
+test-extras = "tests"
+
+[tool.cibuildwheel.macos.environment]
+PATH = "$(pwd)/build/deps/darwin/bin:$(dirname $(which python3)):/usr/bin:/bin:/usr/sbin:/sbin:/Library/Apple/usr/bin"
+CFLAGS = "-I$(pwd)/build/deps/darwin/include"
+LDFLAGS = "-L$(pwd)/build/deps/darwin/lib"
+
+[tool.cibuildwheel.linux]
+before-test = "yum install -y libtiff-devel libjpeg-devel zlib-devel libpng-devel"
+
+[[tool.cibuildwheel.overrides]]
+select = "*-musllinux*"
+before-test = "apk update && apk add jpeg-dev tiff-dev zlib-dev libpng-dev"

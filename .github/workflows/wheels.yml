@@ -12,15 +12,19 @@ env:
   CONFIG_PATH: pillow-avif-plugin/wheelbuild/config.sh
   LIBAVIF_VERSION: 88d3dccda111f6ccbcccd925179f67e7d6fdf4ff
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
-    name: ${{ matrix.python }} ${{ matrix.os-name }} ${{ matrix.arch == 'x86' && 'x86_64' || matrix.os-type == 'macos' && 'arm64' || 'aarch64' }}
-    runs-on: ${{ matrix.os-type == 'ubuntu' && 'ubuntu-latest' || (matrix.os-type == 'macos' && (matrix.arch == 'x86' || matrix.python == '2.7' || matrix.python == '3.7')) && 'macos-13' || 'macos-latest' }}
+  legacy:
+    name: ${{ matrix.os-name }} ${{ matrix.arch == 'x86' && 'x86_64' || matrix.os-type == 'macos' && 'arm64' || 'aarch64' }} (${{ matrix.python }})
+    runs-on: ${{ (matrix.os-type == 'ubuntu' && matrix.arch == 'arm' && 'ubuntu-24.04-arm') || (matrix.os-type == 'ubuntu' && 'ubuntu-latest') || (matrix.os-type == 'macos' && (matrix.arch == 'x86' || matrix.python == '2.7' || matrix.python == '3.7')) && 'macos-13' || 'macos-latest' }}
     strategy:
       fail-fast: false
       matrix:
         os-type: [ "ubuntu", "macos" ]
-        python: [ "2.7", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12" ]
+        python: [ "2.7", "3.7", "3.8" ]
         arch: [ "x86", "arm" ]
         manylinux-version: [ "2014" ]
         mb-ml-libc: [ "manylinux", "musllinux" ]
@@ -44,7 +48,13 @@ jobs:
             mb-ml-libc: "musllinux"
         include:
           - os-type: "macos"
-            os-name: "macOS"
+            arch: "arm"
+            os-name: "macOS 11.0"
+            dist-name: "macos-11.0"
+          - os-type: "macos"
+            arch: "x86"
+            os-name: "macOS 10.10"
+            dist-name: "macos-10.10"
           - os-type: "ubuntu"
             os: "ubuntu-latest"
             python: "2.7"
@@ -73,22 +83,16 @@ jobs:
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.arch == 'arm' && '11.0' || '10.10' }}
       MB_ML_LIBC: ${{ matrix.mb-ml-libc }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: pillow-avif-plugin
 
-      - name: Checkout dependencies
-        uses: actions/checkout@v3
-        with:
-          repository: fdintino/pillow-avif-plugin-depends
-          path: pillow-avif-plugin-depends
-
       - name: Checkout multibuild
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: multi-build/multibuild
           path: multibuild
-          ref: ${{ (matrix.python == '3.11' || matrix.python == '3.12' || matrix.os == 'macos-latest' || (env.PLAT == 'arm64' && matrix.python != '2.7')) && '88146e74ebc86baf97b6fec448ef766d64326582' || '34e970c4bc448b73af0127615fc4583b4f247369' }}
+          ref: ${{ (matrix.os == 'macos-latest' || (env.PLAT == 'arm64' && matrix.python != '2.7')) && '88146e74ebc86baf97b6fec448ef766d64326582' || '34e970c4bc448b73af0127615fc4583b4f247369' }}
 
       - uses: actions/setup-python@v4
         with:
@@ -134,198 +138,215 @@ jobs:
           sudo chown -R $(whoami):$(id -ng) ccache ||:
           sudo chown -R $(whoami):$(id -ng) sccache ||:
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          name: dist-${{ matrix.dist-name || matrix.os-name }}-${{ matrix.arch == 'x86' && 'x86_64' || (matrix.os-type == 'macos' && 'arm64') || 'aarch64' }}-python${{ matrix.python }}
           path: wheelhouse/*.whl
 
-  windows:
-    runs-on: windows-2019
+  build-native-wheels:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
-        architecture: ["x64"]
         include:
-          - architecture: "x64"
-            platform-vcvars: "x86_amd64"
-            platform-msbuild: "x64"
-    timeout-minutes: 300
-
-    name: ${{ matrix.python-version }} windows ${{ matrix.architecture }}
-
+          - name: "macOS 10.10 x86_64"
+            os: macos-13
+            cibw_arch: x86_64
+            build: "cp3{9,10,11}*"
+            macosx_deployment_target: "10.10"
+            dist_name: "macos-10.10-x86_64"
+          - name: "macOS 10.13 x86_64"
+            os: macos-13
+            cibw_arch: x86_64
+            build: "cp3{12,13}*"
+            macosx_deployment_target: "10.13"
+            dist_name: "macos-10.13-x86_64"
+          - name: "macOS 10.15 x86_64"
+            os: macos-13
+            cibw_arch: x86_64
+            build: "pp310*"
+            macosx_deployment_target: "10.15"
+            dist_name: "macos-10.15-x86_64"
+          - name: "macOS arm64"
+            os: macos-latest
+            cibw_arch: arm64
+            macosx_deployment_target: "11.0"
+            dist_name: "macos-11-arm64"
+          - name: "manylinux2014 x86_64"
+            os: ubuntu-latest
+            cibw_arch: x86_64
+            build: "*manylinux*"
+            dist_name: "manylinux2014-x86_64"
+          - name: "musllinux x86_64"
+            os: ubuntu-latest
+            cibw_arch: x86_64
+            build: "*musllinux*"
+            dist_name: "musllinux-x86_64"
+          - name: "manylinux_2_28 x86_64"
+            os: ubuntu-latest
+            cibw_arch: x86_64
+            build: "*manylinux*"
+            manylinux: "manylinux_2_28"
+            dist_name: "manylinux_2_28-x86_64"
+          - name: "manylinux2014 aarch64"
+            os: ubuntu-24.04-arm
+            cibw_arch: aarch64
+            build: "*manylinux*"
+            dist_name: "manylinux2014-aarch64"
+          - name: "musllinux aarch64"
+            os: ubuntu-24.04-arm
+            cibw_arch: aarch64
+            build: "*musllinux*"
+            dist_name: "musllinux-aarch64"
+          - name: "manylinux_2_28 aarch64"
+            os: ubuntu-24.04-arm
+            cibw_arch: aarch64
+            build: "*manylinux*"
+            manylinux: "manylinux_2_28"
+            dist_name: "manylinux_2_28-aarch64"
     steps:
-    - name: Checkout pillow-avif-plugin
-      uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Checkout cached dependencies
-      uses: actions/checkout@v3
-      with:
-        repository: python-pillow/pillow-depends
-        path: winbuild\depends
+      - name: Checkout multibuild
+        uses: actions/checkout@v4
+        with:
+          repository: multi-build/multibuild
+          path: multibuild
+          ref: 42d761728d141d8462cd9943f4329f12fe62b155
 
-    - name: Cache pip
-      uses: actions/cache@v3
-      with:
-        path: ~\AppData\Local\pip\Cache
-        key:
-          ${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.architecture }}-${{ hashFiles('**/.github/workflows/test-windows.yml') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.architecture }}-
-          ${{ runner.os }}-${{ matrix.python-version }}-
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
 
-    # sets env: pythonLocation
+      - name: Install cibuildwheel
+        run: |
+          python3 -m pip install -r .ci/requirements-cibw.txt
+
+      - name: Build wheels
+        run: |
+          python3 -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          CIBW_BUILD: ${{ matrix.build }}
+          CIBW_ENABLE: cpython-prerelease cpython-freethreading pypy
+          CIBW_MANYLINUX_AARCH64_IMAGE: ${{ matrix.manylinux }}
+          CIBW_MANYLINUX_PYPY_X86_64_IMAGE: ${{ matrix.manylinux }}
+          CIBW_MANYLINUX_PYPY_AARCH64_IMAGE: ${{ matrix.manylinux }}
+          CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux }}
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
+          CIBW_SKIP: "pp36-* pp37-* pp38-* cp36-* cp37-* cp38-* pp39-* pp311-*"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.dist_name }}
+          path: ./wheelhouse/*.whl
+
+  windows:
+    name: Windows ${{ matrix.cibw_arch }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cibw_arch: AMD64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install cibuildwheel
+        run: |
+          python.exe -m pip install -r .ci/requirements-cibw.txt
+
+      - name: Prepare for build
+        run: |
+          choco install nasm --no-progress
+          echo "C:\Program Files\NASM" >> $env:GITHUB_PATH
+
+          python.exe -m pip install meson
+          
+          & python.exe winbuild\build_prepare.py -v --architecture=${{ matrix.cibw_arch }}
+        shell: pwsh
+
+      - name: Build wheels
+        run: |
+          setlocal EnableDelayedExpansion
+          for %%f in (winbuild\build\license\*) do (
+            set x=%%~nf
+            echo. >> LICENSE
+            echo ===== %%~nf ===== >> LICENSE
+            echo. >> LICENSE
+            type %%f >> LICENSE
+          )
+          call winbuild\\build\\build_env.cmd
+          %pythonLocation%\python.exe -m cibuildwheel . --output-dir wheelhouse
+        env:
+          CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          CIBW_BEFORE_ALL: "{package}\\winbuild\\build\\build_dep_all.cmd"
+          CIBW_CACHE_PATH: "C:\\cibw"
+          CIBW_ENABLE: cpython-prerelease cpython-freethreading pypy
+          CIBW_TEST_SKIP: "*-win_arm64 pp*"
+          CIBW_SKIP: "pp36-* pp37-* pp38-* pp39-* pp311-* cp36-* cp37-* cp38-*"
+          CIBW_TEST_COMMAND: 'docker run --rm
+            -v {project}:C:\pillow-avif-plugin
+            -v C:\cibw:C:\cibw
+            -v %CD%\..\venv-test:%CD%\..\venv-test
+            -e CI -e GITHUB_ACTIONS
+            mcr.microsoft.com/windows/servercore:ltsc2022
+            powershell C:\pillow-avif-plugin\.github\workflows\wheels-test.ps1 %CD%\..\venv-test'
+        shell: cmd
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-windows-${{ matrix.cibw_arch }}
+          path: ./wheelhouse/*.whl
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
-        architecture: ${{ matrix.architecture }}
+        python-version: "3.x"
+        cache: pip
+        cache-dependency-path: "Makefile"
 
-    - name: python -m pip install wheel pytest pytest-cov mock
-      run: python -m pip install wheel pytest pytest-cov mock
+    - run: |
+        python3 -m build --help > /dev/null 2>&1 || python3 -m pip install build
+        python3 -m build --sdist
+        python3 -m twine --help > /dev/null 2>&1 || python3 -m pip install twine
+        python3 -m twine check --strict dist/*
 
-    - name: Install dependencies
-      id: install
-      run: |
-        7z x winbuild\depends\nasm-2.16.01-win64.zip "-o$env:RUNNER_WORKSPACE\"
-        echo "$env:RUNNER_WORKSPACE\nasm-2.16.01" >> $env:GITHUB_PATH
-
-        python -m pip install meson
-
-        # make cache key depend on VS version
-        & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" `
-          | find """catalog_buildVersion""" `
-          | ForEach-Object { $a = $_.split(" ")[1]; echo "vs=$a" >> $env:GITHUB_OUTPUT }
-      shell: pwsh
-
-    - name: Cache build
-      id: build-cache
-      uses: actions/cache@v3
+    - uses: actions/upload-artifact@v4
       with:
-        path: winbuild\build
-        key:
-          ${{ hashFiles('winbuild\build_prepare.py') }}-${{ hashFiles('.github\workflows\test-windows.yml') }}-${{ env.pythonLocation }}-${{ steps.install.outputs.vs }}
-
-    - name: Prepare build
-      if: steps.build-cache.outputs.cache-hit != 'true'
-      run: |
-        & python.exe winbuild\build_prepare.py -v
-      shell: pwsh
-
-    - name: Build dependencies / libjpeg-turbo
-      if: steps.build-cache.outputs.cache-hit != 'true'
-      run: "& winbuild\\build\\build_dep_libjpeg.cmd"
-
-    - name: Build dependencies / zlib
-      if: steps.build-cache.outputs.cache-hit != 'true'
-      run: "& winbuild\\build\\build_dep_zlib.cmd"
-
-    - name: Build dependencies / libpng
-      if: steps.build-cache.outputs.cache-hit != 'true'
-      run: "& winbuild\\build\\build_dep_libpng.cmd"
-
-    - name: Build dependencies / meson (python 2.7)
-      if: steps.build-cache.outputs.cache-hit != 'true' && matrix.python-version == '2.7'
-      run: "& winbuild\\build\\install_meson.cmd"
-
-    - name: Build dependencies / meson (python 3.x)
-      if: steps.build-cache.outputs.cache-hit != 'true' && matrix.python-version != '2.7'
-      run: python -m pip install meson
-      shell: cmd
-
-    - name: Build dependencies / rav1e
-      if: steps.build-cache.outputs.cache-hit != 'true'
-      run: "& winbuild\\build\\build_dep_rav1e.cmd"
-
-    - name: Build dependencies / libavif
-      if: steps.build-cache.outputs.cache-hit != 'true'
-      run: "& winbuild\\build\\build_dep_libavif.cmd"
-
-    # trim ~150MB x 9
-    - name: Optimize build cache
-      if: steps.build-cache.outputs.cache-hit != 'true'
-      run: rmdir /S /Q winbuild\build\src
-      shell: cmd
-
-    - name: Install dependencies / Pillow
-      run: |
-        cmd /c "winbuild\build\build_env.cmd && $env:pythonLocation\python.exe -m pip install -v Pillow"
-      shell: pwsh
-
-    - name: Build pillow-avif-plugin
-      run: |
-        cmd /c "winbuild\build\build_env.cmd && $env:pythonLocation\python.exe -m pip install -v ."
-      shell: pwsh
-
-    # failing with PyPy3
-    - name: Enable heap verification
-      if: "!contains(matrix.python-version, 'pypy')"
-      run: "& 'C:\\Program Files (x86)\\Windows Kits\\10\\Debuggers\\x86\\gflags.exe' /p /enable $env:pythonLocation\\python.exe"
-
-    - name: Test pillow-avif-plugin
-      run: |
-        path %GITHUB_WORKSPACE%\\winbuild\\build\\bin;%PATH%
-        python.exe -m pytest -v -W always --cov pillow_avif --cov tests --cov-report term --cov-report xml tests
-      shell: cmd
-
-    - name: Prepare to upload errors
-      if: failure()
-      run: |
-        mkdir -p tests/errors
-      shell: pwsh
-
-    - name: Upload errors
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: errors
-        path: tests/errors
-
-    - name: After success
-      run: |
-        coverage xml
-      shell: pwsh
-
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: GHA_Windows
-        name: ${{ runner.os }} Python ${{ matrix.python-version }} ${{ matrix.architecture }}
-
-    - name: Build wheel
-      id: wheel
-      if: "github.event_name == 'push'"
-      run: |
-        cmd /c "winbuild\build\build_env.cmd && $env:pythonLocation\python.exe -m pip wheel -v ."
-      shell: pwsh
-
-    - uses: actions/upload-artifact@v3
-      if: "github.event_name == 'push'"
-      with:
-        name: wheels
-        path: "*.whl"
+        name: dist-sdist
+        path: dist/*.tar.gz
 
   success:
-    needs: [build, windows]
+    needs: [legacy, windows, build-native-wheels, sdist]
     runs-on: ubuntu-latest
     name: Build Successful
     steps:
-      - name: Success
-        run: echo Build Successful
-
-  release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    if: "startsWith(github.ref, 'refs/tags/')"
-    needs: [build, windows]
-    steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
         with:
           name: wheels
-
+          path: ./**/*.*
       - name: Upload Release
         uses: fnkr/github-action-ghr@v1.3
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GHR_PATH: .
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  

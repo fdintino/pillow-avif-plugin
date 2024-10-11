@@ -7,6 +7,7 @@ import re
 import shutil
 import struct
 import subprocess
+from typing import Any
 
 
 def cmd_cd(path: str) -> str:
@@ -38,30 +39,25 @@ def cmd_rmdir(path: str) -> str:
     return f'rmdir /S /Q "{path}"'
 
 
-def cmd_lib_combine(outfile: str, *libfiles) -> str:
-    params = " ".join(['"%s"' % f for f in libfiles])
-    return "LIB.EXE /OUT:{outfile} {params}".format(outfile=outfile, params=params)
-
-
 def cmd_nmake(
     makefile: str | None = None,
     target: str = "",
     params: list[str] | None = None,
 ) -> str:
-    params = "" if params is None else " ".join(params)
-
     return " ".join(
         [
             "{nmake}",
             "-nologo",
             f'-f "{makefile}"' if makefile is not None else "",
-            f"{params}",
+            f'{" ".join(params)}' if params is not None else "",
             f'"{target}"',
         ]
     )
 
 
-def cmds_cmake(target: str | tuple[str, ...] | list[str], *params) -> list[str]:
+def cmds_cmake(
+    target: str | tuple[str, ...] | list[str], *params: str, build_dir: str = "."
+) -> list[str]:
     if not isinstance(target, str):
         target = " ".join(target)
 
@@ -78,10 +74,11 @@ def cmds_cmake(target: str | tuple[str, ...] | list[str], *params) -> list[str]:
                 "-DCMAKE_CXX_FLAGS=-nologo",
                 *params,
                 '-G "{cmake_generator}"',
-                ".",
+                f'-B "{build_dir}"',
+                "-S .",
             ]
         ),
-        f"{{cmake}} --build . --clean-first --parallel --target {target}",
+        f'{{cmake}} --build "{build_dir}" --clean-first --parallel --target {target}',
     ]
 
 
@@ -89,7 +86,7 @@ def cmd_msbuild(
     file: str,
     configuration: str = "Release",
     target: str = "Build",
-    platform: str = "{msbuild_arch}",
+    plat: str = "{msbuild_arch}",
 ) -> str:
     return " ".join(
         [
@@ -97,7 +94,7 @@ def cmd_msbuild(
             f"{file}",
             f'/t:"{target}"',
             f'/p:Configuration="{configuration}"',
-            f"/p:Platform={platform}",
+            f"/p:Platform={plat}",
             "/m",
         ]
     )
@@ -107,84 +104,22 @@ SF_PROJECTS = "https://sourceforge.net/projects"
 
 ARCHITECTURES = {
     "x86": {"vcvars_arch": "x86", "msbuild_arch": "Win32"},
-    "x64": {"vcvars_arch": "x86_amd64", "msbuild_arch": "x64"},
+    "AMD64": {"vcvars_arch": "x86_amd64", "msbuild_arch": "x64"},
     "ARM64": {"vcvars_arch": "x86_arm64", "msbuild_arch": "ARM64"},
 }
 
+V = {
+    "MESON": "1.5.1",
+    "LIBAVIF": "1.2.0",
+}
+
+
 # dependencies, listed in order of compilation
-DEPS = {
-    "libjpeg": {
-        "url": SF_PROJECTS
-        + "/libjpeg-turbo/files/3.0.0/libjpeg-turbo-3.0.0.tar.gz/download",
-        "filename": "libjpeg-turbo-3.0.0.tar.gz",
-        "dir": "libjpeg-turbo-3.0.0",
-        "license": ["README.ijg", "LICENSE.md"],
-        "license_pattern": (
-            "(LEGAL ISSUES\n============\n\n.+?)\n\nREFERENCES\n=========="
-            ".+(libjpeg-turbo Licenses\n======================\n\n.+)$"
-        ),
-        "build": [
-            *cmds_cmake(
-                ("jpeg-static", "cjpeg-static", "djpeg-static"),
-                "-DENABLE_SHARED:BOOL=FALSE",
-                "-DWITH_JPEG8:BOOL=TRUE",
-                "-DWITH_CRT_DLL:BOOL=TRUE",
-            ),
-            cmd_copy("jpeg-static.lib", "libjpeg.lib"),
-            cmd_copy("cjpeg-static.exe", "cjpeg.exe"),
-            cmd_copy("djpeg-static.exe", "djpeg.exe"),
-        ],
-        "headers": ["j*.h"],
-        "libs": ["libjpeg.lib"],
-        "bins": ["cjpeg.exe", "djpeg.exe"],
-    },
-    "zlib": {
-        "url": "https://zlib.net/zlib13.zip",
-        "filename": "zlib13.zip",
-        "dir": "zlib-1.3",
-        "license": "README",
-        "license_pattern": "Copyright notice:\n\n(.+)$",
-        "build": [
-            cmd_nmake(r"win32\Makefile.msc", "clean"),
-            cmd_nmake(r"win32\Makefile.msc", "zlib.lib"),
-            cmd_copy("zlib.lib", "z.lib"),
-        ],
-        "headers": [r"z*.h"],
-        "libs": [r"*.lib"],
-    },
-    "libpng": {
-        "url": SF_PROJECTS + "/libpng/files/libpng16/1.6.39/lpng1639.zip/download",
-        "filename": "lpng1639.zip",
-        "dir": "lpng1639",
-        "license": "LICENSE",
-        "build": [
-            *cmds_cmake("png_static", "-DPNG_SHARED:BOOL=OFF", "-DPNG_TESTS:BOOL=OFF"),
-            cmd_copy("libpng16_static.lib", "libpng16.lib"),
-        ],
-        "headers": [r"png*.h"],
-        "libs": [r"libpng16.lib"],
-    },
-    "rav1e": {
-        "url": (
-            "https://github.com/xiph/rav1e/releases/download/v0.7.1/"
-            "rav1e-0.7.1-windows-msvc-generic.zip"
-        ),
-        "filename": "rav1e-0.7.1-windows-msvc-generic.zip",
-        "dir": "rav1e-windows-msvc-sdk",
-        "license": "LICENSE",
-        "build": [
-            cmd_xcopy("include", "{inc_dir}"),
-        ],
-        "bins": [r"bin\*.dll"],
-        "libs": [r"lib\*.*"],
-    },
+DEPS: dict[str, dict[str, Any]] = {
     "libavif": {
-        "url": (
-            "https://github.com/AOMediaCodec/libavif/archive/"
-            "1a1c778f8e0b7ecdf3af9e59a6f33eb4d7d3900e.zip"
-        ),
-        "filename": "libavif-1a1c778f8e0b7ecdf3af9e59a6f33eb4d7d3900e.zip",
-        "dir": "libavif-1a1c778f8e0b7ecdf3af9e59a6f33eb4d7d3900e",
+        "url": f"https://github.com/AOMediaCodec/libavif/archive/v{V['LIBAVIF']}.zip",
+        "filename": f"libavif-{V['LIBAVIF']}.zip",
+        "dir": f"libavif-{V['LIBAVIF']}",
         "license": "LICENSE",
         "build": [
             cmd_mkdir("build.pillow"),
@@ -194,23 +129,18 @@ DEPS = {
                     "{cmake}",
                     "-DCMAKE_BUILD_TYPE=Release",
                     "-DCMAKE_VERBOSE_MAKEFILE=ON",
-                    "-DCMAKE_RULE_MESSAGES:BOOL=OFF",  # for NMake
-                    "-DCMAKE_C_COMPILER=cl.exe",  # for Ninja
-                    "-DCMAKE_CXX_COMPILER=cl.exe",  # for Ninja
+                    "-DCMAKE_RULE_MESSAGES:BOOL=OFF",
+                    "-DCMAKE_C_COMPILER=cl.exe",
+                    "-DCMAKE_CXX_COMPILER=cl.exe",
                     "-DCMAKE_C_FLAGS=-nologo",
                     "-DCMAKE_CXX_FLAGS=-nologo",
                     "-DBUILD_SHARED_LIBS=OFF",
-                    "-DAVIF_CODEC_AOM=ON",
-                    "-DAVIF_LOCAL_AOM=ON",
-                    "-DAVIF_LOCAL_LIBYUV=ON",
-                    "-DAVIF_LOCAL_LIBSHARPYUV=ON",
-                    "-DAVIF_CODEC_RAV1E=ON",
-                    "-DAVIF_RAV1E_ROOT={build_dir}",
-                    "-DCMAKE_MODULE_PATH={winbuild_dir_cmake}",
-                    "-DAVIF_CODEC_DAV1D=ON",
-                    "-DAVIF_LOCAL_DAV1D=ON",
-                    "-DAVIF_CODEC_SVT=ON",
-                    "-DAVIF_LOCAL_SVT=ON",
+                    "-DAVIF_CODEC_AOM=LOCAL",
+                    "-DAVIF_LIBYUV=LOCAL",
+                    "-DAVIF_LIBSHARPYUV=LOCAL",
+                    "-DAVIF_CODEC_RAV1E=LOCAL",
+                    "-DAVIF_CODEC_DAV1D=LOCAL",
+                    "-DAVIF_CODEC_SVT=LOCAL",
                     '-G "Ninja"',
                     "..",
                 ]
@@ -225,11 +155,15 @@ DEPS = {
 
 
 # based on distutils._msvccompiler from CPython 3.7.4
-def find_msvs() -> dict[str, str] | None:
+def find_msvs(architecture: str) -> dict[str, str] | None:
     root = os.environ.get("ProgramFiles(x86)") or os.environ.get("ProgramFiles")
     if not root:
         print("Program Files not found")
         return None
+
+    requires = ["-requires", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64"]
+    if architecture == "ARM64":
+        requires += ["-requires", "Microsoft.VisualStudio.Component.VC.Tools.ARM64"]
 
     try:
         vspath = (
@@ -240,8 +174,7 @@ def find_msvs() -> dict[str, str] | None:
                     ),
                     "-latest",
                     "-prerelease",
-                    "-requires",
-                    "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+                    *requires,
                     "-property",
                     "installationPath",
                     "-products",
@@ -282,6 +215,7 @@ def find_msvs() -> dict[str, str] | None:
 
 
 def download_dep(url: str, file: str) -> None:
+    import urllib.error
     import urllib.request
 
     ex = None
@@ -298,23 +232,16 @@ def download_dep(url: str, file: str) -> None:
         raise RuntimeError(ex)
 
 
-def extract_dep(url: str, filename: str) -> None:
+def extract_dep(url: str, filename: str, prefs: dict[str, str]) -> None:
     import tarfile
     import zipfile
 
-    file = os.path.join(args.depends_dir, filename)
+    depends_dir = prefs["depends_dir"]
+    sources_dir = prefs["src_dir"]
+
+    file = os.path.join(depends_dir, filename)
     if not os.path.exists(file):
-        # First try our mirror
-        mirror_url = (
-            f"https://raw.githubusercontent.com/"
-            f"python-pillow/pillow-depends/main/{filename}"
-        )
-        try:
-            download_dep(mirror_url, file)
-        except RuntimeError as exc:
-            # Otherwise try upstream
-            print(exc)
-            download_dep(url, file)
+        download_dep(url, file)
 
     print("Extracting " + filename)
     sources_dir_abs = os.path.abspath(sources_dir)
@@ -327,7 +254,7 @@ def extract_dep(url: str, filename: str) -> None:
                     msg = "Attempted Path Traversal in Zip File"
                     raise RuntimeError(msg)
             zf.extractall(sources_dir)
-    elif filename.endswith(".tar.gz") or filename.endswith(".tgz"):
+    elif filename.endswith((".tar.gz", ".tgz")):
         with tarfile.open(file, "r:gz") as tgz:
             for member in tgz.getnames():
                 member_abspath = os.path.abspath(os.path.join(sources_dir, member))
@@ -341,18 +268,20 @@ def extract_dep(url: str, filename: str) -> None:
         raise RuntimeError(msg)
 
 
-def write_script(name: str, lines: list[str]) -> None:
-    name = os.path.join(args.build_dir, name)
+def write_script(
+    name: str, lines: list[str], prefs: dict[str, str], verbose: bool
+) -> None:
+    name = os.path.join(prefs["build_dir"], name)
     lines = [line.format(**prefs) for line in lines]
     print("Writing " + name)
     with open(name, "w", newline="") as f:
         f.write(os.linesep.join(lines))
-    if args.verbose:
+    if verbose:
         for line in lines:
             print("    " + line)
 
 
-def get_footer(dep: dict) -> list[str]:
+def get_footer(dep: dict[str, Any]) -> list[str]:
     lines = []
     for out in dep.get("headers", []):
         lines.append(cmd_copy(out, "{inc_dir}"))
@@ -363,7 +292,7 @@ def get_footer(dep: dict) -> list[str]:
     return lines
 
 
-def build_env() -> None:
+def build_env(prefs: dict[str, str], verbose: bool) -> None:
     lines = [
         "if defined DISTUTILS_USE_SDK goto end",
         cmd_set("INCLUDE", "{inc_dir}"),
@@ -376,34 +305,36 @@ def build_env() -> None:
         ":end",
         "@echo on",
     ]
-    write_script("build_env.cmd", lines)
+    write_script("build_env.cmd", lines, prefs, verbose)
 
 
-def build_dep(name: str) -> str:
+def build_dep(name: str, prefs: dict[str, str], verbose: bool) -> str:
     dep = DEPS[name]
-    dir = dep["dir"]
+    directory = dep["dir"]
     file = f"build_dep_{name}.cmd"
+    license_dir = prefs["license_dir"]
+    sources_dir = prefs["src_dir"]
 
-    extract_dep(dep["url"], dep["filename"])
+    extract_dep(dep["url"], dep["filename"], prefs)
 
     licenses = dep["license"]
     if isinstance(licenses, str):
         licenses = [licenses]
     license_text = ""
     for license_file in licenses:
-        with open(os.path.join(sources_dir, dir, license_file)) as f:
+        with open(os.path.join(sources_dir, directory, license_file)) as f:
             license_text += f.read()
     if "license_pattern" in dep:
         match = re.search(dep["license_pattern"], license_text, re.DOTALL)
+        assert match is not None
         license_text = "\n".join(match.groups())
-    if licenses:
-        assert len(license_text) > 50
-        with open(os.path.join(license_dir, f"{dir}.txt"), "w") as f:
-            print(f"Writing license {dir}.txt")
-            f.write(license_text)
+    assert len(license_text) > 50
+    with open(os.path.join(license_dir, f"{directory}.txt"), "w") as f:
+        print(f"Writing license {directory}.txt")
+        f.write(license_text)
 
     for patch_file, patch_list in dep.get("patch", {}).items():
-        patch_file = os.path.join(sources_dir, dir, patch_file.format(**prefs))
+        patch_file = os.path.join(sources_dir, directory, patch_file.format(**prefs))
         with open(patch_file) as f:
             text = f.read()
         for patch_from, patch_to in patch_list.items():
@@ -415,60 +346,53 @@ def build_dep(name: str) -> str:
             print(f"Patching {patch_file}")
             f.write(text)
 
-    banner = f"Building {name} ({dir})"
+    banner = f"Building {name} ({directory})"
     lines = [
         r'call "{build_dir}\build_env.cmd"',
         "@echo " + ("=" * 70),
         f"@echo ==== {banner:<60} ====",
         "@echo " + ("=" * 70),
-        cmd_cd(os.path.join(sources_dir, dir)),
+        cmd_cd(os.path.join(sources_dir, directory)),
         *dep.get("build", []),
         *get_footer(dep),
     ]
 
-    write_script(file, lines)
+    write_script(file, lines, prefs, verbose)
     return file
 
 
-def build_dep_all() -> None:
+def build_dep_all(disabled: list[str], prefs: dict[str, str], verbose: bool) -> None:
     lines = [r'call "{build_dir}\build_env.cmd"']
+    gha_groups = "GITHUB_ACTIONS" in os.environ
+    scripts = ["install_meson.cmd"]
     for dep_name in DEPS:
         print()
         if dep_name in disabled:
             print(f"Skipping disabled dependency {dep_name}")
             continue
-        script = build_dep(dep_name)
+        scripts.append(build_dep(dep_name, prefs, verbose))
+
+    for script in scripts:
+        if gha_groups:
+            lines.append(f"@echo ::group::Running {script}")
         lines.append(rf'cmd.exe /c "{{build_dir}}\{script}"')
         lines.append("if errorlevel 1 echo Build failed! && exit /B 1")
+        if gha_groups:
+            lines.append("@echo ::endgroup::")
     print()
     lines.append("@echo All Pillow dependencies built successfully!")
-    write_script("build_dep_all.cmd", lines)
+    write_script("build_dep_all.cmd", lines, prefs, verbose)
 
 
-def install_meson():
-    msi_url = "https://github.com/mesonbuild/meson/releases/download/0.56.2/meson-0.56.2-64.msi"  # noqa: E501
-    msi_file = os.path.join(args.depends_dir, "meson-0.56.2-64.msi")
-    download_dep(msi_url, msi_file)
-
-    lines = [
-        "@echo on",
-        "@echo ---- Installing meson ----",
-        "msiexec /q /i %s" % msi_file,
-        "@echo meson installed successfully",
-    ]
-    write_script("install_meson.cmd", lines)
-
-
-if __name__ == "__main__":
+def main() -> None:
     winbuild_dir = os.path.dirname(os.path.realpath(__file__))
-    pillow_dir = os.path.realpath(os.path.join(winbuild_dir, ".."))
 
     parser = argparse.ArgumentParser(
         prog="winbuild\\build_prepare.py",
-        description="Download and generate build scripts for Pillow dependencies.",
-        epilog="""Arguments can also be supplied using the environment variables
-                  PILLOW_BUILD, PILLOW_DEPS, ARCHITECTURE. See winbuild\\build.rst
-                  for more information.""",
+        description=(
+            "Download and generate build scripts "
+            "for pillow-avif-plugin dependencies."
+        ),
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="print generated scripts"
@@ -478,15 +402,19 @@ if __name__ == "__main__":
         "--dir",
         "--build-dir",
         dest="build_dir",
-        metavar="PILLOW_BUILD",
-        default=os.environ.get("PILLOW_BUILD", os.path.join(winbuild_dir, "build")),
+        metavar="PILLOW_AVIF_PLUGIN_BUILD",
+        default=os.environ.get(
+            "PILLOW_AVIF_PLUGIN_BUILD", os.path.join(winbuild_dir, "build")
+        ),
         help="build directory (default: 'winbuild\\build')",
     )
     parser.add_argument(
         "--depends",
         dest="depends_dir",
-        metavar="PILLOW_DEPS",
-        default=os.environ.get("PILLOW_DEPS", os.path.join(winbuild_dir, "depends")),
+        metavar="PILLOW_AVIF_PLUGIN_DEPS",
+        default=os.environ.get(
+            "PILLOW_AVIF_PLUGIN_DEPS", os.path.join(winbuild_dir, "depends")
+        ),
         help="directory used to store cached dependencies "
         "(default: 'winbuild\\depends')",
     )
@@ -498,7 +426,7 @@ if __name__ == "__main__":
             (
                 "ARM64"
                 if platform.machine() == "ARM64"
-                else ("x86" if struct.calcsize("P") == 4 else "x64")
+                else ("x86" if struct.calcsize("P") == 4 else "AMD64")
             ),
         ),
         help="build architecture (default: same as host Python)",
@@ -511,12 +439,13 @@ if __name__ == "__main__":
         default="Ninja",
         help="build dependencies using NMake instead of Ninja",
     )
+
     args = parser.parse_args()
 
     arch_prefs = ARCHITECTURES[args.architecture]
     print("Target architecture:", args.architecture)
 
-    msvs = find_msvs()
+    msvs = find_msvs(args.architecture)
     if msvs is None:
         msg = "Visual Studio not found. Please install Visual Studio 2017 or newer."
         raise RuntimeError(msg)
@@ -552,16 +481,16 @@ if __name__ == "__main__":
         "architecture": args.architecture,
         **arch_prefs,
         # Pillow paths
-        "pillow_dir": pillow_dir,
         "winbuild_dir": winbuild_dir,
         "winbuild_dir_cmake": winbuild_dir.replace("\\", "/"),
         # Build paths
+        "bin_dir": bin_dir,
         "build_dir": args.build_dir,
+        "depends_dir": args.depends_dir,
         "inc_dir": inc_dir,
         "lib_dir": lib_dir,
-        "bin_dir": bin_dir,
-        "src_dir": sources_dir,
         "license_dir": license_dir,
+        "src_dir": sources_dir,
         # Compilers / Tools
         **msvs,
         "cmake": "cmake.exe",  # TODO find CMAKE automatically
@@ -574,7 +503,22 @@ if __name__ == "__main__":
 
     print()
 
-    write_script(".gitignore", ["*"])
-    build_env()
-    install_meson()
-    build_dep_all()
+    write_script(".gitignore", ["*"], prefs, args.verbose)
+    write_script(
+        "install_meson.cmd",
+        [
+            r'call "{build_dir}\build_env.cmd"',
+            "@echo " + ("=" * 70),
+            f"@echo ==== {'Building meson':<60} ====",
+            "@echo " + ("=" * 70),
+            f"python -mpip install meson=={V['MESON']}",
+        ],
+        prefs,
+        args.verbose,
+    )
+    build_env(prefs, args.verbose)
+    build_dep_all(disabled, prefs, args.verbose)
+
+
+if __name__ == "__main__":
+    main()

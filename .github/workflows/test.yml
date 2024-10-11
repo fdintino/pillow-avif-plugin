@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [
-          "ubuntu-20.04",
+          "ubuntu-22.04",
           "macos-13",
         ]
         python-version: [
@@ -26,14 +26,14 @@ jobs:
         libavif-version: [ "0.11.0" ]
         include:
         - python-version: "3.9"
-          os: "ubuntu-20.04"
+          os: "ubuntu-22.04"
           libavif-version: "88d3dccda111f6ccbcccd925179f67e7d6fdf4ff"
         - python-version: "3.7"
           PYTHONOPTIMIZE: 1
         - python-version: "3.8"
           PYTHONOPTIMIZE: 2
         # Include new variables for Codecov
-        - os: ubuntu-20.04
+        - os: ubuntu-22.04
           codecov-flag: GHA_Ubuntu
         - os: macos-13
           codecov-flag: GHA_macOS
@@ -50,7 +50,7 @@ jobs:
       LIBAVIF_VERSION: ${{ matrix.libavif-version }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
       if: matrix.python-version != '2.7'
@@ -89,7 +89,7 @@ jobs:
         mkdir -p tests/errors
 
     - name: Upload errors
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: errors
@@ -101,9 +101,9 @@ jobs:
         CODECOV_NAME: ${{ matrix.os }} Python ${{ matrix.python-version }}
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
 
   msys:
     runs-on: windows-latest
@@ -117,12 +117,11 @@ jobs:
     env:
       MSYSTEM: MINGW64
       CHERE_INVOKING: 1
-      SETUPTOOLS_USE_DISTUTILS: stdlib
 
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up shell
         run: echo "C:\msys64\usr\bin\" >> $env:GITHUB_PATH
@@ -135,18 +134,17 @@ jobs:
               git \
               mingw-w64-x86_64-gcc \
               mingw-w64-x86_64-toolchain \
-              mingw-w64-x86_64-python3-pip \
-              mingw-w64-x86_64-python3-setuptools \
+              mingw-w64-x86_64-python-pip \
+              mingw-w64-x86_64-python-setuptools \
+              mingw-w64-x86_64-python-pillow \
+              mingw-w64-x86_64-python-pytest \
+              mingw-w64-x86_64-python-pytest-cov \
               mingw-w64-x86_64-libjpeg-turbo \
               mingw-w64-x86_64-libtiff \
               mingw-w64-x86_64-libpng \
               mingw-w64-x86_64-openjpeg2 \
               mingw-w64-x86_64-zlib \
               mingw-w64-x86_64-libavif
-
-      - name: Install Dependencies
-        run: |
-            python3 -m pip install pytest pytest-cov pillow mock
 
       - name: Build pillow-avif-plugin
         run: CFLAGS="-coverage" python3 -m pip install .
@@ -156,9 +154,9 @@ jobs:
           python3 -m pytest -vx --cov pillow_avif --cov tests --cov-report term --cov-report xml tests
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
-          file: ./coverage.xml
+          files: ./coverage.xml
           flags: GHA_Windows
           name: "MSYS2 MinGW"
   success:
