@@ -65,7 +65,7 @@ setup(
     download_url="https://github.com/fdintino/pillow-avif-plugin/releases",
     install_requires=[],
     extras_require={
-        "test": [
+        "tests": [
             "gcovr",
             "pytest",
             "packaging",

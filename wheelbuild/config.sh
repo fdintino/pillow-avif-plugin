@@ -404,19 +404,19 @@ function ensure_sudo {
 
 function append_licenses {
     group_start "Append licenses"
-    for filename in $REPO_DIR/wheelbuild/dependency_licenses/*.txt; do
-      echo -e "\n\n----\n\n$(basename $filename | cut -f 1 -d '.')\n" | cat >> $REPO_DIR/LICENSE
-      cat $filename >> $REPO_DIR/LICENSE
+    for filename in wheelbuild/dependency_licenses/*.txt; do
+      echo -e "\n\n----\n\n$(basename $filename | cut -f 1 -d '.')\n" | cat >> LICENSE
+      cat $filename >> LICENSE
     done
-    echo -e "\n\n" | cat >> $REPO_DIR/LICENSE
-    cat $REPO_DIR/wheelbuild/dependency_licenses/PATENTS >> $REPO_DIR/LICENSE
+    echo -e "\n\n" | cat >> LICENSE
+    cat wheelbuild/dependency_licenses/PATENTS >> LICENSE
     group_end
 }
 
 function pre_build {
     echo "::endgroup::"
 
-    if [ -e /etc/yum.repos.d ]; then
+    if [ -e /etc/yum.repos.d/CentOS-*.repo ]; then
         sed -i -e '/^mirrorlist=http:\/\/mirrorlist.centos.org\// { s/^/#/ ; T }' \
             -e '{ s/#baseurl=/baseurl=/ ; s/mirror\.centos\.org/vault.centos.org/ }' \
             /etc/yum.repos.d/CentOS-*.repo
