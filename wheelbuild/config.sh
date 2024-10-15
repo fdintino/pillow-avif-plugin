@@ -10,6 +10,9 @@ CCACHE_VERSION=4.7.1
 SCCACHE_VERSION=0.3.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
 export GITHUB_ACTIONS=1
+export PYTHON_EXE="${PYTHON_EXE:-python}"
+export REPO_DIR=$(dirname $CONFIG_DIR)
+
 
 # Convenience functions to run shell commands suppressed from "set -x" tracing
 shopt -s expand_aliases
@@ -378,7 +381,7 @@ function ensure_openssl {
     if [ ! -n "$IS_MACOS" ]; then
         group_start "Install openssl"
         if [ -n "$IS_ALPINE" ]; then
-            apk add libressl-dev openssl-dev
+            apk add openssl-dev
         elif [[ $MB_ML_VER == "_2_24" ]]; then
             apt-get install -y libssl-dev
         else
@@ -404,19 +407,26 @@ function ensure_sudo {
 
 function append_licenses {
     group_start "Append licenses"
+    local prefix=""
+    if [ -e "$REPO_DIR" ]; then
+        pushd $REPO_DIR
+    fi
     for filename in wheelbuild/dependency_licenses/*.txt; do
       echo -e "\n\n----\n\n$(basename $filename | cut -f 1 -d '.')\n" | cat >> LICENSE
       cat $filename >> LICENSE
     done
     echo -e "\n\n" | cat >> LICENSE
     cat wheelbuild/dependency_licenses/PATENTS >> LICENSE
+    if [ -e "$REPO_DIR" ]; then
+        popd
+    fi
     group_end
 }
 
 function pre_build {
     echo "::endgroup::"
 
-    if [ -e /etc/yum.repos.d/CentOS-*.repo ]; then
+    if [ -e /etc/yum.repos.d/CentOS-Base.repo ]; then
         sed -i -e '/^mirrorlist=http:\/\/mirrorlist.centos.org\// { s/^/#/ ; T }' \
             -e '{ s/#baseurl=/baseurl=/ ; s/mirror\.centos\.org/vault.centos.org/ }' \
             /etc/yum.repos.d/CentOS-*.repo
@@ -444,7 +454,7 @@ function pre_build {
     install_sccache
     install_ccache
 
-    if [ "$PLAT" != "arm64" ] && [ "$PLAT" != "aarch64" ]; then
+    if [ "$PLAT" == "x86_64" ] || [ "$PLAT" == "i686" ]; then
         build_nasm
     fi
     install_cmake
@@ -453,7 +463,7 @@ function pre_build {
 
     if [[ -n "$IS_MACOS" ]]; then
         # clear bash path cache for curl
-        hash -d curl
+        hash -d curl ||:
     fi
 
     if [ -e $HOME/.cargo/env ]; then

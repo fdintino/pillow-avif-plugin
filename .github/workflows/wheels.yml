@@ -88,7 +88,7 @@ jobs:
         with:
           repository: multi-build/multibuild
           path: multibuild
-          ref: 34e970c4bc448b73af0127615fc4583b4f247369
+          ref: ${{ (matrix.os == 'macos-latest' || (env.PLAT == 'arm64' && matrix.python != '2.7')) && '88146e74ebc86baf97b6fec448ef766d64326582' || '34e970c4bc448b73af0127615fc4583b4f247369' }}
 
       - uses: actions/setup-python@v4
         with:
@@ -294,7 +294,7 @@ jobs:
 
           python.exe -m pip install meson
           
-          & python.exe winbuild\build_prepare.py -v --no-imagequant --architecture=${{ matrix.cibw_arch }}
+          & python.exe winbuild\build_prepare.py -v --architecture=${{ matrix.cibw_arch }}
         shell: pwsh
 
       - name: Build wheels
