@@ -52,8 +52,8 @@ test_requires = [
 
 if sys.version_info[:2] == (3, 13):
     test_requires += [
-        "git+https://github.com/cython/cython.git@"
-        "7beedb19c43f3e865056b8181e55897b222a645b#egg=cython"
+        "cython @ git+https://github.com/cython/cython.git@"
+        "7beedb19c43f3e865056b8181e55897b222a645b"
     ]
 
 setup(
