@@ -254,7 +254,7 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux }}
           CIBW_PRERELEASE_PYTHONS: True
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
-          CIBW_SKIP: "pp36-* pp37-* pp38-*"
+          CIBW_SKIP: "pp36-* pp37-* pp38-* cp36-* cp37-* cp38-*"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -308,8 +308,8 @@ jobs:
           CIBW_CACHE_PATH: "C:\\cibw"
           CIBW_FREE_THREADED_SUPPORT: True
           CIBW_PRERELEASE_PYTHONS: True
-          CIBW_TEST_SKIP: "*-win_arm64"
-          CIBW_SKIP: "pp36-* pp37-* pp38-*"
+          CIBW_TEST_SKIP: "*-win_arm64 pp*"
+          CIBW_SKIP: "pp36-* pp37-* pp38-* cp36-* cp37-* cp38-*"
           CIBW_TEST_COMMAND: 'docker run --rm
             -v {project}:C:\pillow-avif-plugin
             -v C:\cibw:C:\cibw
