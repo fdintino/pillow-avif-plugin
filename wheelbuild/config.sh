@@ -12,7 +12,7 @@ export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-
 export GITHUB_ACTIONS=1
 export PYTHON_EXE="${PYTHON_EXE:-python}"
 export REPO_DIR=$(dirname $CONFIG_DIR)
-
+export PLAT=$CIBW_ARCHS
 
 # Convenience functions to run shell commands suppressed from "set -x" tracing
 shopt -s expand_aliases
