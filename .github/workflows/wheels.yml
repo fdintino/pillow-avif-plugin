@@ -77,12 +77,6 @@ jobs:
         with:
           path: pillow-avif-plugin
 
-      - name: Checkout dependencies
-        uses: actions/checkout@v3
-        with:
-          repository: fdintino/pillow-avif-plugin-depends
-          path: pillow-avif-plugin-depends
-
       - name: Checkout multibuild
         uses: actions/checkout@v3
         with:
