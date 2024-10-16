@@ -41,6 +41,21 @@ if sys.platform == "win32":
         ]
     )
 
+test_requires = [
+    "gcovr",
+    "pytest",
+    "packaging",
+    "pytest-cov",
+    "test-image-results",
+    "pillow",
+]
+
+if sys.version_info[:2] == (3, 13):
+    test_requires += [
+        "git+https://github.com/cython/cython.git@"
+        "7beedb19c43f3e865056b8181e55897b222a645b#egg=cython"
+    ]
+
 setup(
     name="pillow-avif-plugin",
     description="A pillow plugin that adds avif support via libavif",
@@ -64,16 +79,7 @@ setup(
     url="https://github.com/fdintino/pillow-avif-plugin/",
     download_url="https://github.com/fdintino/pillow-avif-plugin/releases",
     install_requires=[],
-    extras_require={
-        "tests": [
-            "gcovr",
-            "pytest",
-            "packaging",
-            "pytest-cov",
-            "test-image-results",
-            "pillow",
-        ]
-    },
+    extras_require={"tests": test_requires},
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Environment :: Web Environment",

@@ -1,4 +1,4 @@
-param ([string]$venv, [string]$pillow_avif_plugin="C:\pillow_avif_plugin")
+param ([string]$venv, [string]$pillow_avif_plugin="C:\pillow-avif-plugin")
 $ErrorActionPreference  = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Set-PSDebug -Trace 1
