@@ -267,9 +267,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - cibw_arch: x86
           - cibw_arch: AMD64
-          - cibw_arch: ARM64
     steps:
       - uses: actions/checkout@v4
 
