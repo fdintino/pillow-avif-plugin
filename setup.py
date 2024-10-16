@@ -42,19 +42,12 @@ if sys.platform == "win32":
     )
 
 test_requires = [
-    "gcovr",
     "pytest",
     "packaging",
     "pytest-cov",
     "test-image-results",
     "pillow",
 ]
-
-if sys.version_info[:2] == (3, 13):
-    test_requires += [
-        "cython @ git+https://github.com/cython/cython.git@"
-        "7beedb19c43f3e865056b8181e55897b222a645b"
-    ]
 
 setup(
     name="pillow-avif-plugin",
