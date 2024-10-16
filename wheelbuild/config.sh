@@ -7,12 +7,13 @@ ARCHIVE_SDIR=pillow-avif-plugin-depends
 LIBAVIF_VERSION=1.1.1
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.7.1
-SCCACHE_VERSION=0.3.0
+SCCACHE_VERSION=0.8.2
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
 export GITHUB_ACTIONS=1
 export PYTHON_EXE="${PYTHON_EXE:-python}"
 export REPO_DIR=$(dirname $CONFIG_DIR)
-export PLAT=$CIBW_ARCHS
+
+export PLAT="${AUDITWHEEL_ARCH:-${CIBW_ARCHS:-${PLAT}}}"
 
 # Convenience functions to run shell commands suppressed from "set -x" tracing
 shopt -s expand_aliases
