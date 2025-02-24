@@ -250,7 +250,7 @@ def _save(im, fp, filename, save_all=False):
                 # Append the frame to the animation encoder
                 enc.add(
                     frame.tobytes("raw", rawmode),
-                    frame_dur,
+                    int(frame_dur),
                     frame.size[0],
                     frame.size[1],
                     rawmode,
