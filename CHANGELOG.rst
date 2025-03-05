@@ -1,6 +1,36 @@
 Changelog
 =========
 
+Changes since 1.4.6 (unreleased)
+--------------------------------
+
+*  **CI**: Update libavif to 1.2.0 (`4eb0a40`_, 2025-03-05); publish wheels
+   for python 3.13. See the table below for the current AVIF codec versions.
+   Libraries whose versions have changed since the last pillow-avif-plugin
+   release are bolded.
+
+.. table::
+
+  ===========  ==========
+  **libavif**  **1.2.0** (`4eb0a40`_)
+  **libaom**   **3.12.0**
+  **dav1d**    **1.5.1**
+  **SVT-AV1**  **3.0.0**
+  rav1e        0.7.1
+  ===========  ==========
+
+.. _4eb0a40: https://github.com/AOMediaCodec/libavif/commit/4eb0a40fb06612adf53650a14c692eaf62c068e6
+
+1.4.6 (Jul 14, 2024)
+--------------------
+
+* **Fixed**: macOS arm64 illegal instruction segmentation fault with aom
+  encoding in `#60`_ and `#61`_; fixes `#59`_.
+
+.. _#59: https://github.com/fdintino/pillow-avif-plugin/issues/59
+.. _#60: https://github.com/fdintino/pillow-avif-plugin/pull/60
+.. _#61: https://github.com/fdintino/pillow-avif-plugin/pull/61
+
 1.4.4 (Jul 8, 2024)
 -------------------
 
