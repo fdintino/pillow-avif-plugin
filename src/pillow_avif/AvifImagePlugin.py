@@ -16,10 +16,8 @@ except ImportError:
 # to Image.open (see https://github.com/python-pillow/Pillow/issues/569)
 DECODE_CODEC_CHOICE = "auto"
 CHROMA_UPSAMPLING = "auto"
+# Decoding is only affected by this for libavif **0.8.4** or greater.
 DEFAULT_MAX_THREADS = 0
-
-_VALID_AVIF_MODES = {"RGB", "RGBA"}
-
 
 if sys.version_info[0] == 2:
     text_type = unicode  # noqa
@@ -29,18 +27,12 @@ else:
 
 def _accept(prefix):
     if prefix[4:8] != b"ftyp":
-        return
-    coding_brands = (b"avif", b"avis")
-    container_brands = (b"mif1", b"msf1")
+        return False
     major_brand = prefix[8:12]
-    if major_brand in coding_brands:
-        if not SUPPORTED:
-            return (
-                "image file could not be identified because AVIF "
-                "support not installed"
-            )
-        return True
-    if major_brand in container_brands:
+    if major_brand in (
+        # coding brands
+        b"avif",
+        b"avis",
         # We accept files with AVIF container brands; we can't yet know if
         # the ftyp box has the correct compatible brands, but if it doesn't
         # then the plugin will raise a SyntaxError which Pillow will catch
@@ -48,66 +40,107 @@ def _accept(prefix):
         #
         # Also, because this file might not actually be an AVIF file, we
         # don't raise an error if AVIF support isn't properly compiled.
+        b"mif1",
+        b"msf1",
+    ):
+        if not SUPPORTED:
+            return (
+                "image file could not be identified because AVIF support not installed"
+            )
         return True
+    return False
 
 
 class AvifImageFile(ImageFile.ImageFile):
     format = "AVIF"
     format_description = "AVIF image"
-    __loaded = -1
-    __frame = 0
-
-    def load_seek(self, pos):
-        pass
+    __frame = -1
 
     def _open(self):
+        if not SUPPORTED:
+            msg = "image file could not be opened because AVIF support not installed"
+            raise SyntaxError(msg)
+
+        if DECODE_CODEC_CHOICE != "auto" and not _avif.decoder_codec_available(
+            DECODE_CODEC_CHOICE
+        ):
+            msg = "Invalid opening codec"
+            raise ValueError(msg)
         self._decoder = _avif.AvifDecoder(
             self.fp.read(), DECODE_CODEC_CHOICE, CHROMA_UPSAMPLING, DEFAULT_MAX_THREADS
         )
 
         # Get info from decoder
-        width, height, n_frames, mode, icc, exif, xmp = self._decoder.get_info()
-        self._size = width, height
-        self.n_frames = n_frames
+        (
+            width,
+            height,
+            self.n_frames,
+            mode,
+            icc,
+            exif,
+            exif_orientation,
+            xmp,
+        ) = self._decoder.get_info()
+        self._size = (width, height)
         self.is_animated = self.n_frames > 1
         try:
             self.mode = self.rawmode = mode
         except AttributeError:
             self._mode = self.rawmode = mode
-        self.tile = []
 
         if icc:
             self.info["icc_profile"] = icc
-        if exif:
-            self.info["exif"] = exif
         if xmp:
             self.info["xmp"] = xmp
+
+        if exif_orientation != 1 or exif:
+            exif_data = Image.Exif()
+            orientation_tag = next(
+                k for k, v in ExifTags.TAGS.items() if v == "Orientation"
+            )
+            if exif:
+                exif_data.load(exif)
+                original_orientation = exif_data.get(orientation_tag, 1)
+            else:
+                original_orientation = 1
+            if exif_orientation != original_orientation:
+                exif_data[orientation_tag] = exif_orientation
+                exif = exif_data.tobytes()
+        if exif:
+            self.info["exif"] = exif
+        self.seek(0)
 
     def seek(self, frame):
         if not self._seek_check(frame):
             return
 
+        # Set tile
         self.__frame = frame
+        if hasattr(ImageFile, "_Tile"):
+            self.tile = [ImageFile._Tile("raw", (0, 0) + self.size, 0, self.mode)]
+        else:
+            self.tile = [("raw", (0, 0) + self.size, 0, self.mode)]
 
     def load(self):
-        if self.__loaded != self.__frame:
+        if self.tile:
             # We need to load the image data for this frame
-            data, timescale, tsp_in_ts, dur_in_ts = self._decoder.get_frame(
-                self.__frame
-            )
-            timestamp = round(1000 * (tsp_in_ts / timescale))
-            duration = round(1000 * (dur_in_ts / timescale))
-            self.info["timestamp"] = timestamp
-            self.info["duration"] = duration
-            self.__loaded = self.__frame
+            (
+                data,
+                timescale,
+                pts_in_timescales,
+                duration_in_timescales,
+            ) = self._decoder.get_frame(self.__frame)
+            self.info["timestamp"] = round(1000 * (pts_in_timescales / timescale))
+            self.info["duration"] = round(1000 * (duration_in_timescales / timescale))
 
-            # Set tile
             if self.fp and self._exclusive_fp:
                 self.fp.close()
             self.fp = BytesIO(data)
-            self.tile = [("raw", (0, 0) + self.size, 0, self.rawmode)]
 
         return super(AvifImageFile, self).load()
+
+    def load_seek(self, pos):
+        pass
 
     def tell(self):
         return self.__frame
@@ -128,19 +161,21 @@ def _save(im, fp, filename, save_all=False):
     for ims in [im] + append_images:
         total += getattr(ims, "n_frames", 1)
 
-    is_single_frame = total == 1
-
     qmin = info.get("qmin", -1)
     qmax = info.get("qmax", -1)
     quality = info.get("quality", 75)
     if not isinstance(quality, int) or quality < 0 or quality > 100:
-        raise ValueError("Invalid quality setting")
+        msg = "Invalid quality setting"
+        raise ValueError(msg)
 
     duration = info.get("duration", 0)
     subsampling = info.get("subsampling", "4:2:0")
     speed = info.get("speed", 6)
     max_threads = info.get("max_threads", DEFAULT_MAX_THREADS)
     codec = info.get("codec", "auto")
+    if codec != "auto" and not _avif.encoder_codec_available(codec):
+        msg = "Invalid saving codec"
+        raise ValueError(msg)
     range_ = info.get("range", "full")
     tile_rows_log2 = info.get("tile_rows", 0)
     tile_cols_log2 = info.get("tile_cols", 0)
@@ -171,20 +206,21 @@ def _save(im, fp, filename, save_all=False):
         xmp = xmp.encode("utf-8")
 
     advanced = info.get("advanced")
-    if isinstance(advanced, dict):
-        advanced = tuple([k, v] for (k, v) in advanced.items())
     if advanced is not None:
+        if isinstance(advanced, dict):
+            advanced = tuple(advanced.items())
         try:
             advanced = tuple(advanced)
         except TypeError:
             invalid = True
         else:
-            invalid = all(isinstance(v, tuple) and len(v) == 2 for v in advanced)
+            invalid = any(not isinstance(v, tuple) or len(v) != 2 for v in advanced)
         if invalid:
-            raise ValueError(
+            msg = (
                 "advanced codec options must be a dict of key-value string "
                 "pairs or a series of key-value two-tuples"
             )
+            raise ValueError(msg)
         advanced = tuple(
             [(str(k).encode("utf-8"), str(v).encode("utf-8")) for k, v in advanced]
         )
@@ -214,8 +250,9 @@ def _save(im, fp, filename, save_all=False):
 
     # Add each frame
     frame_idx = 0
-    frame_dur = 0
+    frame_duration = 0
     cur_idx = im.tell()
+    is_single_frame = total == 1
     try:
         for ims in [im] + append_images:
             # Get # of frames in this image
@@ -228,7 +265,7 @@ def _save(im, fp, filename, save_all=False):
                 # Make sure image mode is supported
                 frame = ims
                 rawmode = ims.mode
-                if ims.mode not in _VALID_AVIF_MODES:
+                if ims.mode not in {"RGB", "RGBA"}:
                     alpha = (
                         "A" in ims.mode
                         or "a" in ims.mode
@@ -243,14 +280,14 @@ def _save(im, fp, filename, save_all=False):
 
                 # Update frame duration
                 if isinstance(duration, (list, tuple)):
-                    frame_dur = duration[frame_idx]
+                    frame_duration = duration[frame_idx]
                 else:
-                    frame_dur = duration
+                    frame_duration = duration
 
                 # Append the frame to the animation encoder
                 enc.add(
                     frame.tobytes("raw", rawmode),
-                    frame_dur,
+                    frame_duration,
                     frame.size[0],
                     frame.size[1],
                     rawmode,
@@ -269,7 +306,8 @@ def _save(im, fp, filename, save_all=False):
     # Get the final output from the encoder
     data = enc.finish()
     if data is None:
-        raise OSError("cannot write file as AVIF (encoder returned None)")
+        msg = "cannot write file as AVIF (encoder returned None)"
+        raise OSError(msg)
 
     fp.write(data)
 
