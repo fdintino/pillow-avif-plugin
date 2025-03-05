@@ -279,6 +279,9 @@ _add_codec_specific_options(avifEncoder *encoder, PyObject *opts) {
             return 1;
         }
 
+#if AVIF_VERSION < 1000000
+        avifEncoderSetCodecSpecificOption(encoder, key, val);
+#else
         avifResult result = avifEncoderSetCodecSpecificOption(encoder, key, val);
         if (result != AVIF_RESULT_OK) {
             PyErr_Format(
@@ -287,6 +290,7 @@ _add_codec_specific_options(avifEncoder *encoder, PyObject *opts) {
                 avifResultToString(result));
             return 1;
         }
+#endif
     }
     return 0;
 }
@@ -478,6 +482,12 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
     if (PyBytes_GET_SIZE(icc_bytes)) {
         self->icc_bytes = icc_bytes;
         Py_INCREF(icc_bytes);
+#if AVIF_VERSION < 1000000
+        avifImageSetProfileICC(
+            image,
+            (uint8_t *)PyBytes_AS_STRING(icc_bytes),
+            PyBytes_GET_SIZE(icc_bytes));
+#else
         result = avifImageSetProfileICC(
             image,
             (uint8_t *)PyBytes_AS_STRING(icc_bytes),
@@ -490,6 +500,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
             error = 1;
             goto end;
         }
+#endif
         // colorPrimaries and transferCharacteristics are ignored when an ICC
         // profile is present, so set them to UNSPECIFIED.
         image->colorPrimaries = AVIF_COLOR_PRIMARIES_UNSPECIFIED;
@@ -503,6 +514,12 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
     if (PyBytes_GET_SIZE(exif_bytes)) {
         self->exif_bytes = exif_bytes;
         Py_INCREF(exif_bytes);
+#if AVIF_VERSION < 1000000
+        avifImageSetMetadataExif(
+            image,
+            (uint8_t *)PyBytes_AS_STRING(exif_bytes),
+            PyBytes_GET_SIZE(exif_bytes));
+#else
         result = avifImageSetMetadataExif(
             image,
             (uint8_t *)PyBytes_AS_STRING(exif_bytes),
@@ -515,11 +532,18 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
             error = 1;
             goto end;
         }
+#endif
     }
 
     if (PyBytes_GET_SIZE(xmp_bytes)) {
         self->xmp_bytes = xmp_bytes;
         Py_INCREF(xmp_bytes);
+#if AVIF_VERSION < 1000000
+        avifImageSetMetadataXMP(
+            image,
+            (uint8_t *)PyBytes_AS_STRING(xmp_bytes),
+            PyBytes_GET_SIZE(xmp_bytes));
+#else
         result = avifImageSetMetadataXMP(
             image,
             (uint8_t *)PyBytes_AS_STRING(xmp_bytes),
@@ -532,6 +556,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
             error = 1;
             goto end;
         }
+#endif
     }
 
     if (exif_orientation) {
@@ -649,6 +674,9 @@ _encoder_add(AvifEncoderObject *self, PyObject *args) {
         rgb.format = AVIF_RGB_FORMAT_RGB;
     }
 
+#if AVIF_VERSION < 1000000
+    avifRGBImageAllocatePixels(&rgb);
+#else
     result = avifRGBImageAllocatePixels(&rgb);
     if (result != AVIF_RESULT_OK) {
         PyErr_Format(
@@ -658,6 +686,7 @@ _encoder_add(AvifEncoderObject *self, PyObject *args) {
         error = 1;
         goto end;
     }
+#endif
 
     if (rgb.rowBytes * rgb.height != size) {
         PyErr_Format(
@@ -943,6 +972,9 @@ _decoder_get_frame(AvifDecoderObject *self, PyObject *args) {
     rgb.format = decoder->alphaPresent ? AVIF_RGB_FORMAT_RGBA : AVIF_RGB_FORMAT_RGB;
     rgb.chromaUpsampling = self->upsampling;
 
+#if AVIF_VERSION < 1000000
+    avifRGBImageAllocatePixels(&rgb);
+#else
     result = avifRGBImageAllocatePixels(&rgb);
     if (result != AVIF_RESULT_OK) {
         PyErr_Format(
@@ -951,6 +983,7 @@ _decoder_get_frame(AvifDecoderObject *self, PyObject *args) {
             avifResultToString(result));
         return NULL;
     }
+#endif
 
     Py_BEGIN_ALLOW_THREADS;
     result = avifImageYUVToRGB(image, &rgb);
