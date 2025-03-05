@@ -95,13 +95,16 @@ class AvifImageFile(ImageFile.ImageFile):
 
         if exif_orientation != 1 or exif:
             exif_data = Image.Exif()
+            orientation_tag = next(
+                k for k, v in ExifTags.TAGS.items() if v == "Orientation"
+            )
             if exif:
                 exif_data.load(exif)
-                original_orientation = exif_data.get(ExifTags.Base.Orientation, 1)
+                original_orientation = exif_data.get(orientation_tag, 1)
             else:
                 original_orientation = 1
             if exif_orientation != original_orientation:
-                exif_data[ExifTags.Base.Orientation] = exif_orientation
+                exif_data[orientation_tag] = exif_orientation
                 exif = exif_data.tobytes()
         if exif:
             self.info["exif"] = exif
