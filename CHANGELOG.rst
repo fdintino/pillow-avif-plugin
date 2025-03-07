@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Changes since 1.4.6 (unreleased)
---------------------------------
+1.5.0 (Mar 7, 2025)
+-------------------
 
 * **Fixed**: Convert AVIF irot and imir into EXIF orientation when decoding
   an image, in `#70`_. EXIF orientation has been preserved by the encoder
@@ -11,6 +11,8 @@ Changes since 1.4.6 (unreleased)
   its orientation would be lost.
 * **Fixed**: ``pillow_avif.AvifImagePlugin.CHROMA_UPSAMPLING`` is now actually
   used when decoding an image, in `#70`_.
+* **Fixed**: ``TypeError`` when saving images with float frame durations, by
+  `@BlackSmith`_ in `#68`_ (merged from `#71`_)
 * **Added**: Python 3.13 free-thread mode support (experimental).
 *  **CI**: Update libavif to 1.2.0 (`4eb0a40`_, 2025-03-05); publish wheels
    for python 3.13. See the table below for the current AVIF codec versions.
@@ -27,8 +29,11 @@ Changes since 1.4.6 (unreleased)
   rav1e        0.7.1
   ===========  ==========
 
+.. _#68: https://github.com/fdintino/pillow-avif-plugin/pull/68
 .. _#70: https://github.com/fdintino/pillow-avif-plugin/pull/70
+.. _#71: https://github.com/fdintino/pillow-avif-plugin/pull/71
 .. _4eb0a40: https://github.com/AOMediaCodec/libavif/commit/4eb0a40fb06612adf53650a14c692eaf62c068e6
+.. _@BlackSmith: https://github.com/BlackSmith
 
 1.4.6 (Jul 14, 2024)
 --------------------
