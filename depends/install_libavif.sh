@@ -38,8 +38,8 @@ curl -sLo - \
 pushd libavif-$LIBAVIF_VERSION
 echo "::endgroup::"
 
-if [ "$LIBAVIF_VERSION" == "1.0.1" ]; then
-    patch -p1 < "${SCRIPT_DIR}/../wheelbuild/libavif-1.0.1-local-static.patch"
+if [ "$LIBAVIF_VERSION" != "0.11.0" ]; then
+    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LIBYUV=LOCAL)
 fi
 
 HAS_DECODER=0

@@ -267,7 +267,10 @@ jobs:
           echo "C:\Program Files\NASM" >> $env:GITHUB_PATH
 
           python.exe -m pip install meson
-          
+
+          curl -LO "https://github.com/lu-zero/cargo-c/releases/latest/download/cargo-c-windows-msvc.zip"
+          7z e -y "cargo-c-windows-msvc.zip" -o"${env:USERPROFILE}\.cargo\bin"
+
           & python.exe winbuild\build_prepare.py -v --architecture=${{ matrix.cibw_arch }}
         shell: pwsh
 
