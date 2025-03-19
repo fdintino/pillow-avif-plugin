@@ -1,6 +1,23 @@
 Changelog
 =========
 
+Changes since 1.5.0 (unreleased)
+--------------------------------
+
+*  **CI**: Update libavif to 1.2.1. The only library version change since
+  1.5.0 is SVT-AV1, which was upgraded from 3.0.0 to 3.0.1. See the table
+  below for all AVIF codec versions in this release.
+
+.. table::
+
+  ===========  ==========
+  **libavif**  **1.2.1**
+  libaom       3.12.0
+  dav1d        1.5.1
+  **SVT-AV1**  **3.0.1**
+  rav1e        0.7.1
+  ===========  ==========
+
 1.5.0 (Mar 7, 2025)
 -------------------
 
