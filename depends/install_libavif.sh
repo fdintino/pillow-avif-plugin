@@ -40,6 +40,7 @@ echo "::endgroup::"
 
 if [ "$LIBAVIF_VERSION" != "0.11.0" ]; then
     LIBAVIF_CMAKE_FLAGS+=(-DAVIF_LIBYUV=LOCAL)
+    HAS_EXT_DIR=
 fi
 
 HAS_DECODER=0
@@ -77,8 +78,10 @@ if [ "$HAS_ENCODER" != 1 ] || [ "$HAS_DECODER" != 1 ]; then
         pushd ext > /dev/null
         bash aom.cmd
         popd > /dev/null
+        LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_AOM=ON -DAVIF_LOCAL_AOM=ON)
+    else
+        LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_AOM=LOCAL)
     fi
-    LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_AOM=ON -DAVIF_LOCAL_AOM=ON)
     echo "::endgroup::"
 fi
 
