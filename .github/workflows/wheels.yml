@@ -10,7 +10,7 @@ env:
   MACOSX_DEPLOYMENT_TARGET: "10.10"
   WHEEL_SDIR: wheelhouse
   CONFIG_PATH: pillow-avif-plugin/wheelbuild/config.sh
-  LIBAVIF_VERSION: 88d3dccda111f6ccbcccd925179f67e7d6fdf4ff
+  LIBAVIF_VERSION: 1.2.1
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -261,13 +261,19 @@ jobs:
         run: |
           python.exe -m pip install -r .ci/requirements-cibw.txt
 
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Prepare for build
         run: |
           choco install nasm --no-progress
           echo "C:\Program Files\NASM" >> $env:GITHUB_PATH
 
           python.exe -m pip install meson
-          
+
+          curl -LO "https://github.com/lu-zero/cargo-c/releases/latest/download/cargo-c-windows-msvc.zip"
+          7z e -y "cargo-c-windows-msvc.zip" -o"${env:USERPROFILE}\.cargo\bin"
+
           & python.exe winbuild\build_prepare.py -v --architecture=${{ matrix.cibw_arch }}
         shell: pwsh
 

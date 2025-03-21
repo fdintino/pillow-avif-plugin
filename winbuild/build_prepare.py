@@ -110,7 +110,7 @@ ARCHITECTURES = {
 
 V = {
     "MESON": "1.5.1",
-    "LIBAVIF": "1.2.0",
+    "LIBAVIF": "1.2.1",
 }
 
 

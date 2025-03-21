@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=4eb0a40fb06612adf53650a14c692eaf62c068e6
+LIBAVIF_VERSION=1.2.1
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.10.2
 SCCACHE_VERSION=0.10.0
@@ -335,8 +335,13 @@ EOF
 
     group_start "Download libavif source"
 
+    local libavif_archive="${LIBAVIF_VERSION}.tar.gz"
+    if [[ "$LIBAVIF_VERSION" == *"."* ]]; then
+        libavif_archive="v${libavif_archive}"
+    fi
+
     local out_dir=$(fetch_unpack \
-        "https://github.com/AOMediaCodec/libavif/archive/$LIBAVIF_VERSION.tar.gz" \
+        "https://github.com/AOMediaCodec/libavif/archive/$libavif_archive" \
         "libavif-$LIBAVIF_VERSION.tar.gz")
 
     group_end
