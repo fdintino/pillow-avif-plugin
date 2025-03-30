@@ -367,6 +367,7 @@ EOF
             -DAVIF_CODEC_AOM=LOCAL \
             -DAVIF_CODEC_DAV1D=LOCAL \
             -DENABLE_NASM=ON \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && ninja -v install/strip)
 
@@ -392,7 +393,7 @@ function install_cmake {
     elif [ "$MB_PYTHON_VERSION" == "2.7" ]; then
         $PYTHON_EXE -m pip install 'cmake==3.27.7'
     else
-        $PYTHON_EXE -m pip install cmake
+        $PYTHON_EXE -m pip install 'cmake<4'
     fi
     group_end
 }
