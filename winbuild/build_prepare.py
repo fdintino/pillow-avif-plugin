@@ -127,7 +127,8 @@ DEPS: dict[str, dict[str, Any]] = {
             " ".join(
                 [
                     "{cmake}",
-                    "-DCMAKE_BUILD_TYPE=Release",
+                    "-DCMAKE_BUILD_TYPE=MinSizeRel",
+                    "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON",
                     "-DCMAKE_VERBOSE_MAKEFILE=ON",
                     "-DCMAKE_RULE_MESSAGES:BOOL=OFF",
                     "-DCMAKE_C_COMPILER=cl.exe",

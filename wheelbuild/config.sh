@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=1.2.1
+LIBAVIF_VERSION=a42f2e9aceddc1eca718aae13f9c6cfc25d0c38f
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.10.2
 SCCACHE_VERSION=0.10.0
@@ -317,6 +317,15 @@ EOF
         LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_RAV1E=LOCAL)
     fi
 
+    if [[ "$MB_ML_VER" == 2014 ]] || [[ $MB_ML_VER == 2010 ]]; then
+        LIBAVIF_CMAKE_FLAGS+=(-DCMAKE_BUILD_TYPE=Release)
+    else
+        LIBAVIF_CMAKE_FLAGS+=(-DCMAKE_BUILD_TYPE=MinSizeRel)
+    fi
+
+    if [ -z "$IS_MACOS" ]; then
+        LIBAVIF_CMAKE_FLAGS+=(-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON)
+    fi
     if [ -n "$IS_MACOS" ]; then
         # Prevent cmake from using @rpath in install id, so that delocate can
         # find and bundle the libavif dylib
@@ -360,8 +369,8 @@ EOF
             -G "Ninja" \
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
             -DCMAKE_INSTALL_LIBDIR=$BUILD_PREFIX/lib \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_INSTALL_NAME_DIR=$BUILD_PREFIX/lib \
+            -DBUILD_SHARED_LIBS=ON \
             -DAVIF_LIBSHARPYUV=LOCAL \
             -DAVIF_LIBYUV=LOCAL \
             -DAVIF_CODEC_AOM=LOCAL \
