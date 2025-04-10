@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=a42f2e9aceddc1eca718aae13f9c6cfc25d0c38f
+LIBAVIF_VERSION=1.2.1
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.10.2
 SCCACHE_VERSION=0.10.0
@@ -367,6 +367,7 @@ EOF
     (cd $out_dir/build \
         && cmake .. \
             -G "Ninja" \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
             -DCMAKE_INSTALL_LIBDIR=$BUILD_PREFIX/lib \
             -DCMAKE_INSTALL_NAME_DIR=$BUILD_PREFIX/lib \
