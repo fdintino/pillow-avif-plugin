@@ -381,7 +381,7 @@ function build_nasm {
         CC="$(type -P ccache) $CC"
         CXX="$(type -P ccache) $CXX"
     fi
-    SCCACHE_DIR="$SCCACHE_DIR" CC="$CC" CXX="$CXX" build_simple nasm 2.15.05 https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/
+    SCCACHE_DIR="$SCCACHE_DIR" CC="$CC" CXX="$CXX" build_simple nasm 2.16.01 https://gstreamer.freedesktop.org/src/mirror/ tar.xz
     group_end
 }
 
