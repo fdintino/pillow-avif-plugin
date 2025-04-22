@@ -355,18 +355,30 @@ EOF
 
     mkdir -p $out_dir/build
 
+    local build_type=MinSizeRel
+    local lto=ON
+
+    if [ -n "$IS_MACOS" ]; then
+        lto=OFF
+    elif [[ "$MB_ML_VER" == 2014 ]] && [[ "$PLAT" == "x86_64" ]]; then
+        build_type=Release
+    fi
+
     (cd $out_dir/build \
         && cmake .. \
             -G "Ninja" \
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
             -DCMAKE_INSTALL_LIBDIR=$BUILD_PREFIX/lib \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_INSTALL_NAME_DIR=$BUILD_PREFIX/lib \
+            -DBUILD_SHARED_LIBS=ON \
             -DAVIF_LIBSHARPYUV=LOCAL \
             -DAVIF_LIBYUV=LOCAL \
             -DAVIF_CODEC_AOM=LOCAL \
             -DAVIF_CODEC_DAV1D=LOCAL \
-            -DENABLE_NASM=ON \
+            -DAVIF_CODEC_AOM_DECODE=OFF \
+            -DCONFIG_AV1_HIGHBITDEPTH=0 \
+            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=$lto \
+            -DCMAKE_BUILD_TYPE=$build_type \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && ninja -v install/strip)
 
