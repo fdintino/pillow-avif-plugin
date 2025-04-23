@@ -359,9 +359,21 @@ EOF
     local lto=ON
 
     if [ -n "$IS_MACOS" ]; then
+        # CMake with Clang only permits -flto=thin. To simply pass -flto, it must be done
+        # through CFLAGS
         lto=OFF
-    elif [[ "$MB_ML_VER" == 2014 ]] && [[ "$PLAT" == "x86_64" ]]; then
-        build_type=Release
+        LIBAVIF_CMAKE_FLAGS+=(
+            -DCMAKE_C_FLAGS_MINSIZEREL="-Oz -DNDEBUG -flto " \
+            -DCMAKE_CXX_FLAGS_MINSIZEREL="-Oz -DNDEBUG -flto" \
+            -DCMAKE_SHARED_LINKER_FLAGS_INIT="-Wl,-S,-x,-dead_strip_dylibs" \
+        )
+    else
+        if [[ "$MB_ML_VER" == 2014 ]] && [[ "$PLAT" == "x86_64" ]]; then
+            build_type=Release
+        fi
+        LIBAVIF_CMAKE_FLAGS+=(
+            -DCMAKE_SHARED_LINKER_FLAGS_INIT="-Wl,--strip-all,-z,relro,-z,now" \
+        )
     fi
 
     (cd $out_dir/build \
@@ -378,6 +390,8 @@ EOF
             -DAVIF_CODEC_AOM_DECODE=OFF \
             -DCONFIG_AV1_HIGHBITDEPTH=0 \
             -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=$lto \
+            -DCMAKE_C_VISIBILITY_PRESET=hidden \
+            -DCMAKE_CXX_VISIBILITY_PRESET=hidden \
             -DCMAKE_BUILD_TYPE=$build_type \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && ninja -v install/strip)
