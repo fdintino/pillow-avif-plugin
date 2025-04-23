@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=1.2.1
+LIBAVIF_VERSION=2d0204485a30446d82770c115e0a4d61e2819f23
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.10.2
 SCCACHE_VERSION=0.10.0
@@ -355,18 +355,30 @@ EOF
 
     mkdir -p $out_dir/build
 
+    local build_type=MinSizeRel
+    local lto=ON
+
+    if [ -n "$IS_MACOS" ]; then
+        lto=OFF
+    elif [[ "$MB_ML_VER" == 2014 ]] && [[ "$PLAT" == "x86_64" ]]; then
+        build_type=Release
+    fi
+
     (cd $out_dir/build \
         && cmake .. \
             -G "Ninja" \
             -DCMAKE_INSTALL_PREFIX=$BUILD_PREFIX \
             -DCMAKE_INSTALL_LIBDIR=$BUILD_PREFIX/lib \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_INSTALL_NAME_DIR=$BUILD_PREFIX/lib \
+            -DBUILD_SHARED_LIBS=ON \
             -DAVIF_LIBSHARPYUV=LOCAL \
             -DAVIF_LIBYUV=LOCAL \
             -DAVIF_CODEC_AOM=LOCAL \
             -DAVIF_CODEC_DAV1D=LOCAL \
-            -DENABLE_NASM=ON \
+            -DAVIF_CODEC_AOM_DECODE=OFF \
+            -DCONFIG_AV1_HIGHBITDEPTH=0 \
+            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=$lto \
+            -DCMAKE_BUILD_TYPE=$build_type \
             "${LIBAVIF_CMAKE_FLAGS[@]}" \
         && ninja -v install/strip)
 
@@ -381,7 +393,7 @@ function build_nasm {
         CC="$(type -P ccache) $CC"
         CXX="$(type -P ccache) $CXX"
     fi
-    SCCACHE_DIR="$SCCACHE_DIR" CC="$CC" CXX="$CXX" build_simple nasm 2.15.05 https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/
+    SCCACHE_DIR="$SCCACHE_DIR" CC="$CC" CXX="$CXX" build_simple nasm 2.16.01 https://gstreamer.freedesktop.org/src/mirror/ tar.xz
     group_end
 }
 

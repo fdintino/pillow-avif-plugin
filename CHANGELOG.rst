@@ -5,7 +5,21 @@ Changes since 1.5.1 (unreleased)
 --------------------------------
 
 * **Fixed**: Make compatible with Pillow 11.2.1, by `@radarhere`_ (`#74`_).
+* **CI**: Modify wheel building compile flags to produce smaller binaries.
+* **CI**: Update libavif to `2d02044`_ (2025-04-22). This updates libaom to
+  3.12.1. See the table below for all AVIF codec versions in this release.
 
+.. table::
+
+  ===========  ==========
+  libavif      1.2.1
+  **libaom**   **3.12.1**
+  dav1d        1.5.1
+  SVT-AV1      3.0.1
+  rav1e        0.7.1
+  ===========  ==========
+
+.. _2d02044: https://github.com/AOMediaCodec/libavif/commit/2d0204485a30446d82770c115e0a4d61e2819f23
 .. _#74: https://github.com/fdintino/pillow-avif-plugin/pull/74
 .. _@radarhere: https://github.com/radarhere
 
