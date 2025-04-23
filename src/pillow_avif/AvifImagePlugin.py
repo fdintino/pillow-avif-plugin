@@ -312,6 +312,12 @@ def _save(im, fp, filename, save_all=False):
     fp.write(data)
 
 
+# Prevent Pillow's AVIF plugin from replacing this plugin
+try:
+    from PIL import AvifImagePlugin  # noqa: F401
+except ImportError:
+    pass
+
 Image.register_open(AvifImageFile.format, AvifImageFile, _accept)
 if SUPPORTED:
     Image.register_save(AvifImageFile.format, _save)
