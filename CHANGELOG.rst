@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Changes since 1.5.1 (unreleased)
+--------------------------------
+
+* **Fixed**: Make compatible with Pillow 11.2.1, by `@radarhere`_ (`#74`_).
+
+.. _#74: https://github.com/fdintino/pillow-avif-plugin/pull/74
+.. _@radarhere: https://github.com/radarhere
+
 1.5.1
 -----
 

@@ -314,8 +314,8 @@ def _save(im, fp, filename, save_all=False):
 
 # Prevent Pillow's AVIF plugin from replacing this plugin
 try:
-    from PIL import AvifImagePlugin
-except:
+    from PIL import AvifImagePlugin  # noqa: F401
+except ImportError:
     pass
 
 Image.register_open(AvifImageFile.format, AvifImageFile, _accept)
