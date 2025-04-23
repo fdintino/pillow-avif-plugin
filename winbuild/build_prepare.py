@@ -129,6 +129,8 @@ DEPS: dict[str, dict[str, Any]] = {
                     "{cmake}",
                     "-DCMAKE_BUILD_TYPE=MinSizeRel",
                     "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON",
+                    "-DCMAKE_C_VISIBILITY_PRESET=hidden",
+                    "-DCMAKE_CXX_VISIBILITY_PRESET=hidden",
                     "-DCMAKE_VERBOSE_MAKEFILE=ON",
                     "-DCMAKE_RULE_MESSAGES:BOOL=OFF",
                     "-DCMAKE_C_COMPILER=cl.exe",
