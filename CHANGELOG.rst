@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Changes since 1.5.1 (unreleased)
---------------------------------
+1.5.2 (Apr 24, 2025)
+--------------------
 
 * **Fixed**: Make compatible with Pillow 11.2.1, by `@radarhere`_ (`#74`_).
 * **CI**: Modify wheel building compile flags to produce smaller binaries.
