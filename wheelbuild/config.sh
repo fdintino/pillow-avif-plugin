@@ -4,8 +4,8 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=2d0204485a30446d82770c115e0a4d61e2819f23
-RAV1E_VERSION=0.7.1
+LIBAVIF_VERSION=1.3.0
+RAV1E_VERSION=0.8.1
 CCACHE_VERSION=4.10.2
 SCCACHE_VERSION=0.10.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
@@ -285,21 +285,21 @@ function build_libavif {
         LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
     fi
 
-    build_rav1e
+    # build_rav1e
 
     # Force libavif to treat system rav1e as if it were local
-    if [ -e $BUILD_PREFIX/lib/librav1e.a ]; then
-        mkdir -p /tmp/cmake/Modules
-        cat <<EOF > /tmp/cmake/Modules/Findrav1e.cmake
-        add_library(rav1e::rav1e STATIC IMPORTED GLOBAL)
-        set_target_properties(rav1e::rav1e PROPERTIES
-            IMPORTED_LOCATION "$BUILD_PREFIX/lib/librav1e.a"
-            AVIF_LOCAL ON
-            INTERFACE_INCLUDE_DIRECTORIES "$BUILD_PREFIX/include/rav1e"
-        )
-EOF
-        LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_RAV1E=ON -DCMAKE_MODULE_PATH=/tmp/cmake/Modules)
-    else
+    # if [ -e $BUILD_PREFIX/lib/librav1e.a ]; then
+    #     mkdir -p /tmp/cmake/Modules
+    #     cat <<EOF > /tmp/cmake/Modules/Findrav1e.cmake
+    #     add_library(rav1e::rav1e STATIC IMPORTED GLOBAL)
+    #     set_target_properties(rav1e::rav1e PROPERTIES
+    #         IMPORTED_LOCATION "$BUILD_PREFIX/lib/librav1e.a"
+    #         AVIF_LOCAL ON
+    #         INTERFACE_INCLUDE_DIRECTORIES "$BUILD_PREFIX/include/rav1e"
+    #     )
+# EOF
+    #     LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_RAV1E=ON -DCMAKE_MODULE_PATH=/tmp/cmake/Modules)
+    # else
         curl https://sh.rustup.rs -sSf | sh -s -- -y
         . "$HOME/.cargo/env"
 
@@ -315,7 +315,7 @@ EOF
             fi
         fi
         LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_RAV1E=LOCAL)
-    fi
+    # fi
 
     if [ -n "$IS_MACOS" ]; then
         # Prevent cmake from using @rpath in install id, so that delocate can

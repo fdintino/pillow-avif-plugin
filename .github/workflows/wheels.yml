@@ -10,7 +10,7 @@ env:
   MACOSX_DEPLOYMENT_TARGET: "10.10"
   WHEEL_SDIR: wheelhouse
   CONFIG_PATH: pillow-avif-plugin/wheelbuild/config.sh
-  LIBAVIF_VERSION: 1.2.1
+  LIBAVIF_VERSION: 1.3.0
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
