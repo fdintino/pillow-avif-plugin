@@ -14,7 +14,11 @@ def version():
         if isinstance(node, ast.Assign) and len(node.targets) == 1:
             (target,) = node.targets
             if isinstance(target, ast.Name) and target.id == "__version__":
-                return node.value.s
+                # Python 3.14+ uses ast.Constant with .value instead of ast.Str with .s
+                if hasattr(node.value, 's'):  # Python < 3.14
+                    return node.value.s
+                elif hasattr(node.value, 'value'):  # Python >= 3.14
+                    return node.value.value
 
 
 def readme():
