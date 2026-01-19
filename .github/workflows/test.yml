@@ -11,7 +11,7 @@ jobs:
       matrix:
         os: [
           "ubuntu-22.04",
-          "macos-13",
+          "macos-15-intel",
         ]
         python-version: [
           "pypy-3.7",
@@ -35,11 +35,11 @@ jobs:
         # Include new variables for Codecov
         - os: ubuntu-22.04
           codecov-flag: GHA_Ubuntu
-        - os: macos-13
+        - os: macos-15-intel
           codecov-flag: GHA_macOS
         exclude:
         - python-version: "2.7"
-          os: "macos-13"
+          os: "macos-15-intel"
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} Python ${{ matrix.python-version }} (libavif ${{ matrix.libavif-version }})
