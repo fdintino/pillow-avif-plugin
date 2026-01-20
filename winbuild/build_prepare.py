@@ -110,14 +110,14 @@ ARCHITECTURES = {
 
 V = {
     "MESON": "1.5.1",
-    "LIBAVIF": "1.2.1",
+    "LIBAVIF": "af69350248af4cf63a24927c13ce2fe86fccecc8",
 }
 
 
 # dependencies, listed in order of compilation
 DEPS: dict[str, dict[str, Any]] = {
     "libavif": {
-        "url": f"https://github.com/AOMediaCodec/libavif/archive/v{V['LIBAVIF']}.zip",
+        "url": f"https://github.com/AOMediaCodec/libavif/archive/{V['LIBAVIF']}.zip",
         "filename": f"libavif-{V['LIBAVIF']}.zip",
         "dir": f"libavif-{V['LIBAVIF']}",
         "license": "LICENSE",
