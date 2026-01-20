@@ -147,7 +147,7 @@ jobs:
               mingw-w64-x86_64-libavif
 
       - name: Build pillow-avif-plugin
-        run: CFLAGS="-coverage" python3 -m pip install .
+        run: CFLAGS="-coverage" python3 -m pip install --break-system-packages .
 
       - name: Test pillow-avif-plugin
         run: |
