@@ -14,7 +14,6 @@ import pytest
 
 from PIL import Image, ImageMath
 
-
 logger = logging.getLogger(__name__)
 CURR_DIR = os.path.dirname(os.path.dirname(__file__))
 
