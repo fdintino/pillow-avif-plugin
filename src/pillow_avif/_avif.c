@@ -1064,7 +1064,11 @@ static PyTypeObject AvifDecoder_Type = {
 };
 
 PyObject *
+#if PY_VERSION_HEX >= 0x03000000
+AvifCodecVersions(PyObject *self, PyObject *args) {
+#else
 AvifCodecVersions() {
+#endif
     char codecVersions[256];
     avifCodecVersions(codecVersions);
     return PyUnicode_FromString(codecVersions);
