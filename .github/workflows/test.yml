@@ -3,6 +3,11 @@ name: Test
 on:
   pull_request:
   push:
+    tags:
+      - "*"
+    branches:
+      - main
+
 jobs:
   build:
 
@@ -11,7 +16,7 @@ jobs:
       matrix:
         os: [
           "ubuntu-22.04",
-          "macos-13",
+          "macos-15-intel",
         ]
         python-version: [
           "pypy-3.7",
@@ -35,11 +40,11 @@ jobs:
         # Include new variables for Codecov
         - os: ubuntu-22.04
           codecov-flag: GHA_Ubuntu
-        - os: macos-13
+        - os: macos-15-intel
           codecov-flag: GHA_macOS
         exclude:
         - python-version: "2.7"
-          os: "macos-13"
+          os: "macos-15-intel"
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} Python ${{ matrix.python-version }} (libavif ${{ matrix.libavif-version }})
@@ -147,7 +152,7 @@ jobs:
               mingw-w64-x86_64-libavif
 
       - name: Build pillow-avif-plugin
-        run: CFLAGS="-coverage" python3 -m pip install .
+        run: CFLAGS="-coverage" python3 -m pip install --break-system-packages .
 
       - name: Test pillow-avif-plugin
         run: |

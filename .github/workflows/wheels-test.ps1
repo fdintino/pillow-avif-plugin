@@ -9,10 +9,10 @@ if ("$venv" -like "*\cibw-run-*\pp*-win_amd64\*") {
     C:\vc_redist.x64.exe /install /quiet /norestart | Out-Null
 }
 $env:path += ";$pillow_avif_plugin\winbuild\build\bin\"
-& "$venv\Scripts\activate.ps1"
+$python = "python.exe"
 & reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\python.exe" /v "GlobalFlag" /t REG_SZ /d "0x02000000" /f
 cd $pillow_avif_plugin
-& python -VV
+& $venv\Scripts\$python -VV
 if (!$?) { exit $LASTEXITCODE }
-& python -m pytest -vx tests
+& $venv\Scripts\$python -m pytest -vx tests
 if (!$?) { exit $LASTEXITCODE }

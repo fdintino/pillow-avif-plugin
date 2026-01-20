@@ -1,6 +1,58 @@
 Changelog
 =========
 
+1.5.3 (Jan 20, 2026)
+--------------------
+
+* **Fixed**: ``incompatible-pointer-type`` compiler error. fixes `#82`_.
+* **Fixed**: Python 3.14 support. Based on `#81`_, fixes `#83`_. Thanks
+`@serafdev`_!
+* **CI**: Build Python 3.14 wheels. fixes `#80`_.
+* **CI**: Update libavif to `af6935`_ (2026-01-19), which is part way through
+the release after 1.3.0. See the table below for all AVIF codec versions in
+this release.
+* **CI**: Stop building python 2.7 wheels on macOS arm.
+
+.. table::
+
+  ===========  ==========
+  **libavif**  **1.3.0** (`af6935`_)
+  **libaom**   **3.13.1**
+  **dav1d**    **1.5.3**
+  **SVT-AV1**  **3.1.2**
+  rav1e        0.7.1
+  ===========  ==========
+
+.. _af6935: https://github.com/AOMediaCodec/libavif/commit/af69350248af4cf63a24927c13ce2fe86fccecc8
+.. _#82: https://github.com/fdintino/pillow-avif-plugin/issues/82
+.. _#81: https://github.com/fdintino/pillow-avif-plugin/pull/81
+.. _#83: https://github.com/fdintino/pillow-avif-plugin/issues/83
+.. _#80: https://github.com/fdintino/pillow-avif-plugin/issues/80
+.. _@serafdev: https://github.com/serafdev
+
+1.5.2 (Apr 24, 2025)
+--------------------
+
+* **Fixed**: Make compatible with Pillow 11.2.1, by `@radarhere`_ (`#74`_).
+* **CI**: Modify wheel building compile flags to produce smaller binaries.
+* **CI**: Update libavif to `2d02044`_ (2025-04-22). This updates libaom to
+  3.12.1. See the table below for all AVIF codec versions in this release.
+
+.. table::
+
+  ===========  ==========
+  libavif      1.2.1
+  **libaom**   **3.12.1**
+  dav1d        1.5.1
+  SVT-AV1      3.0.1
+  rav1e        0.7.1
+  ===========  ==========
+
+.. _2d02044: https://github.com/AOMediaCodec/libavif/commit/2d0204485a30446d82770c115e0a4d61e2819f23
+.. _#74: https://github.com/fdintino/pillow-avif-plugin/pull/74
+.. _@radarhere: https://github.com/radarhere
+
+
 1.5.2 (Apr 24, 2025)
 --------------------
 

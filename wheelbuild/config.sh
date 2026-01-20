@@ -4,10 +4,10 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=2d0204485a30446d82770c115e0a4d61e2819f23
+LIBAVIF_VERSION=af69350248af4cf63a24927c13ce2fe86fccecc8
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.10.2
-SCCACHE_VERSION=0.10.0
+SCCACHE_VERSION=0.13.0
 export PERLBREWURL=https://raw.githubusercontent.com/gugod/App-perlbrew/release-0.92/perlbrew
 export GITHUB_ACTIONS=1
 export PYTHON_EXE="${PYTHON_EXE:-python}"
@@ -25,6 +25,10 @@ alias trace_restore='{ [ $trace_enabled -eq 1 ] && trace_on || trace_off; } 2>/d
 if [ -n "$IS_MACOS" ] && [ -n "$MACOSX_DEPLOYMENT_TARGET" ]; then
     CFLAGS="${CFLAGS} -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
     LDFLAGS="${LDFLAGS} -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
+fi
+
+if [ -n "$IS_MACOS" ] && [ "$PLAT" == "x86_64" ]; then
+    SCCACHE_VERSION=0.12.0
 fi
 
 # Temporarily use old linker on macOS arm64. This fixes a bizarre bug where
@@ -141,6 +145,10 @@ function install_sccache {
     if [[ $(type -P sccache) ]]; then
         return
     fi
+    # Disable sccache on macOS arm for now as it seems to fail meson builds
+    if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
+        return
+    fi
     group_start "Install sccache"
     local base_url="https://github.com/mozilla/sccache/releases/download/v$SCCACHE_VERSION"
 
@@ -187,8 +195,11 @@ function install_meson {
             HOMEBREW_PREFIX=/opt/homebrew
         fi
         $HOMEBREW_PREFIX/bin/brew install meson
+        if [ ! -e $BUILD_PREFIX/bin ]; then
+            mkdir -p $BUILD_PREFIX/bin
+        fi
         if [ ! -e $BUILD_PREFIX/bin/meson ]; then
-            ln -s $HOMEBREW_PREFIX/bin/meson $BUILD_PREFIX/bin
+            ln -s $HOMEBREW_PREFIX/bin/meson $BUILD_PREFIX/bin/meson
         fi
     elif [ "$MB_PYTHON_VERSION" == "2.7" ]; then
         local python39_exe=$(cpython_path 3.9)/bin/python
@@ -217,6 +228,7 @@ function install_ninja {
             HOMEBREW_PREFIX=/usr/local
         else
             HOMEBREW_PREFIX=/opt/homebrew
+            mkdir -p "$BUILD_PREFIX/bin"
         fi
         $HOMEBREW_PREFIX/bin/brew install ninja
         if [ ! -e $BUILD_PREFIX/bin/ninja ]; then
