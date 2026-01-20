@@ -145,6 +145,10 @@ function install_sccache {
     if [[ $(type -P sccache) ]]; then
         return
     fi
+    # Disable sccache on macOS arm for now as it seems to fail meson builds
+    if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
+        return
+    fi
     group_start "Install sccache"
     local base_url="https://github.com/mozilla/sccache/releases/download/v$SCCACHE_VERSION"
 
