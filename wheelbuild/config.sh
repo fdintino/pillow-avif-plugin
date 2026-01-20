@@ -195,8 +195,11 @@ function install_meson {
             HOMEBREW_PREFIX=/opt/homebrew
         fi
         $HOMEBREW_PREFIX/bin/brew install meson
+        if [ ! -e $BUILD_PREFIX/bin ]; then
+            mkdir -p $BUILD_PREFIX/bin
+        fi
         if [ ! -e $BUILD_PREFIX/bin/meson ]; then
-            ln -s $HOMEBREW_PREFIX/bin/meson $BUILD_PREFIX/bin
+            ln -s $HOMEBREW_PREFIX/bin/meson $BUILD_PREFIX/bin/meson
         fi
     elif [ "$MB_PYTHON_VERSION" == "2.7" ]; then
         local python39_exe=$(cpython_path 3.9)/bin/python
@@ -225,6 +228,7 @@ function install_ninja {
             HOMEBREW_PREFIX=/usr/local
         else
             HOMEBREW_PREFIX=/opt/homebrew
+            mkdir -p "$BUILD_PREFIX/bin"
         fi
         $HOMEBREW_PREFIX/bin/brew install ninja
         if [ ! -e $BUILD_PREFIX/bin/ninja ]; then
