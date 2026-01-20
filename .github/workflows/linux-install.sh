@@ -24,6 +24,12 @@ aptget_update()
         return 1
     fi
 }
+
+if [ -e /etc/debian_version ] && egrep -q '^10' /etc/debian_version; then
+    sed -i 's/deb.debian.org/archive.debian.org/g' /etc/apt/sources.list
+    sed -i 's|security.debian.org|archive.debian.org|g' /etc/apt/sources.list
+fi
+
 aptget_update || aptget_update retry || aptget_update retry
 
 set -e
