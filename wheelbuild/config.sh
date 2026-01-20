@@ -27,6 +27,10 @@ if [ -n "$IS_MACOS" ] && [ -n "$MACOSX_DEPLOYMENT_TARGET" ]; then
     LDFLAGS="${LDFLAGS} -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
 fi
 
+if [ -n "$IS_MACOS" ] && [ "$PLAT" == "x86_64" ]; then
+    SCCACHE_VERSION=0.12.0
+fi
+
 # Temporarily use old linker on macOS arm64. This fixes a bizarre bug where
 # an invalid instruction is being inserted into the middle of the libaom
 # function compute_stats_win5_neon
