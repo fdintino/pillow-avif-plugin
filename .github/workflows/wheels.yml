@@ -260,7 +260,7 @@ jobs:
 
       - name: Prepare for build
         run: |
-          choco install nasm --no-progress
+          choco install nasm --version 2.16.03 --no-progress
           echo "C:\Program Files\NASM" >> $env:GITHUB_PATH
 
           python.exe -m pip install meson
