@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.5.3 (Jan 20, 2026)
+1.5.3 (Jan 21, 2026)
 --------------------
 
 * **Fixed**: ``incompatible-pointer-type`` compiler error. fixes `#82`_.
