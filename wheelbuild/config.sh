@@ -244,7 +244,7 @@ function install_ninja {
     touch ninja-stamp
 }
 
-function build_rav1e {
+function install_rav1e {
     if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
         librav1e_tgz=librav1e-${RAV1E_VERSION}-macos-aarch64.tar.gz
     elif [ -n "$IS_MACOS" ]; then
@@ -297,7 +297,15 @@ function build_libavif {
         LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_SVT=LOCAL)
     fi
 
-    build_rav1e
+    # Use rav1e binaries for manylinux2010 builds
+    if [[ "$MB_ML_VER" == "2010" ]]; then
+        install_rav1e
+    fi
+    # bizarrely, rav1e build fails on macOS arm64 builds specifically for
+    # python 3.7
+    if [ "$MB_PYTHON_VERSION" == "3.7" ] && [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ]; then
+        install_rav1e
+    fi
 
     # Force libavif to treat system rav1e as if it were local
     if [ -e $BUILD_PREFIX/lib/librav1e.a ]; then
@@ -312,8 +320,27 @@ function build_libavif {
 EOF
         LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_RAV1E=ON -DCMAKE_MODULE_PATH=/tmp/cmake/Modules)
     else
-        curl https://sh.rustup.rs -sSf | sh -s -- -y
+        if [[ "$MB_ML_VER" == "2010" ]]; then
+            curl -sLO https://static.rust-lang.org/rustup/archive/1.25.1/$PLAT-unknown-linux-gnu/rustup-init
+            chmod u+x rustup-init
+            ./rustup-init --default-toolchain 1.63.0 -y
+
+            # install cargo-c binaries
+            mkdir -p $HOME/.cargo/bin
+
+            fetch_unpack \
+                https://github.com/lu-zero/cargo-c/releases/download/v0.9.13/cargo-c-linux.tar.gz \
+                cargo-c-0.9.13-linux.tar.gz
+            mv cargo-c{api,build,install} $HOME/.cargo/bin
+        else
+            curl https://sh.rustup.rs -sSf | /bin/sh -s -- -y
+        fi
+
         . "$HOME/.cargo/env"
+
+        if [ -n "$IS_ALPINE" ]; then
+            apk add zlib-static libunwind-dev libunwind-static
+        fi
 
         if [ -n "$IS_MACOS" ] && [ "$PLAT" == "arm64" ] && [[ "$(uname -m)" != "arm64" ]]; then
             # When cross-compiling to arm64 on macOS, install rust aarch64 target
@@ -323,7 +350,7 @@ EOF
         if [ -z "$IS_ALPINE" ] && [ -z "$SANITIZER" ] && [ -z "$IS_MACOS" ]; then
             yum install -y perl
             if [[ "$MB_ML_VER" == 2014 ]]; then
-                yum install -y perl-IPC-Cmd
+                yum install -y perl-IPC-Cmd perl-Time-Piece
             fi
         fi
         LIBAVIF_CMAKE_FLAGS+=(-DAVIF_CODEC_RAV1E=LOCAL)

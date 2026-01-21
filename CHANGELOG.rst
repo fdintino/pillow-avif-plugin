@@ -20,7 +20,7 @@ this release.
   **libaom**   **3.13.1**
   **dav1d**    **1.5.3**
   **SVT-AV1**  **3.1.2**
-  rav1e        0.7.1
+  **rav1e**    **0.8.1**
   ===========  ==========
 
 .. _af6935: https://github.com/AOMediaCodec/libavif/commit/af69350248af4cf63a24927c13ce2fe86fccecc8
