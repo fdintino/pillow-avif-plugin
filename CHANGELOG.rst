@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.5.3 (Jan 21, 2026)
+1.5.4 (Jan 22, 2026)
 --------------------
 
 * **Fixed**: ``incompatible-pointer-type`` compiler error. fixes `#82`_.
@@ -29,6 +29,11 @@ this release.
 .. _#83: https://github.com/fdintino/pillow-avif-plugin/issues/83
 .. _#80: https://github.com/fdintino/pillow-avif-plugin/issues/80
 .. _@serafdev: https://github.com/serafdev
+
+1.5.3 (Jan 21, 2026)
+--------------------
+
+- Yanked from PyPI because of corrupted wheels.
 
 1.5.2 (Apr 24, 2025)
 --------------------
