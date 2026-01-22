@@ -179,6 +179,7 @@ jobs:
             os: ubuntu-latest
             cibw_arch: x86_64
             build: "*manylinux*"
+            manylinux: "manylinux2014"
             dist_name: "manylinux2014-x86_64"
           - name: "musllinux x86_64"
             os: ubuntu-latest
@@ -195,6 +196,7 @@ jobs:
             os: ubuntu-24.04-arm
             cibw_arch: aarch64
             build: "*manylinux*"
+            manylinux: "manylinux2014"
             dist_name: "manylinux2014-aarch64"
           - name: "musllinux aarch64"
             os: ubuntu-24.04-arm
