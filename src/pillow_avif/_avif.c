@@ -130,7 +130,9 @@ exc_type_for_avif_result(avifResult result) {
 static uint8_t
 irot_imir_to_exif_orientation(const avifImage *image) {
     uint8_t axis;
-#if AVIF_VERSION_MAJOR >= 1
+    // the avifImageMirror member was renamed from axis to mode in 0.9.2,
+    // and back to axis in 1.0.0
+#if AVIF_VERSION_MAJOR >= 1 || AVIF_VERSION < 90200
     axis = image->imir.axis;
 #else
     axis = image->imir.mode;
@@ -144,7 +146,7 @@ irot_imir_to_exif_orientation(const avifImage *image) {
                 return axis ? 7   // 90 degrees anti-clockwise then swap left and right.
                             : 5;  // 90 degrees anti-clockwise then swap top and bottom.
             }
-            return 6;  // 90 degrees anti-clockwise.
+            return 8;  // 90 degrees anti-clockwise.
         }
         if (angle == 2) {
             if (imir) {
@@ -160,7 +162,7 @@ irot_imir_to_exif_orientation(const avifImage *image) {
                            ? 5   // 270 degrees anti-clockwise then swap left and right.
                            : 7;  // 270 degrees anti-clockwise then swap top and bottom.
             }
-            return 8;  // 270 degrees anti-clockwise.
+            return 6;  // 270 degrees anti-clockwise.
         }
     }
     if (imir) {
@@ -179,7 +181,7 @@ exif_orientation_to_irot_imir(avifImage *image, int orientation) {
         case 2:  // The 0th row is at the visual top of the image, and the 0th column is
                  // the visual right-hand side.
             image->transformFlags |= AVIF_TRANSFORM_IMIR;
-#if AVIF_VERSION_MAJOR >= 1
+#if AVIF_VERSION_MAJOR >= 1 || AVIF_VERSION < 90200
             image->imir.axis = 1;
 #else
             image->imir.mode = 1;
@@ -559,7 +561,7 @@ AvifEncoderNew(PyObject *self_, PyObject *args) {
 #endif
     }
 
-    if (exif_orientation) {
+    if (exif_orientation > 1) {
         exif_orientation_to_irot_imir(image, exif_orientation);
     }
 
@@ -586,7 +588,7 @@ end:
     return (PyObject *)self;
 }
 
-PyObject *
+void
 _encoder_dealloc(AvifEncoderObject *self) {
     if (self->encoder) {
         avifEncoderDestroy(self->encoder);
@@ -597,7 +599,7 @@ _encoder_dealloc(AvifEncoderObject *self) {
     Py_XDECREF(self->icc_bytes);
     Py_XDECREF(self->exif_bytes);
     Py_XDECREF(self->xmp_bytes);
-    Py_RETURN_NONE;
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 PyObject *
@@ -648,7 +650,7 @@ _encoder_add(AvifEncoderObject *self, PyObject *args) {
         frame = image;
     } else {
         frame = avifImageCreateEmpty();
-        if (image == NULL) {
+        if (frame == NULL) {
             PyErr_SetString(PyExc_ValueError, "Image creation failed");
             return NULL;
         }
@@ -670,6 +672,10 @@ _encoder_add(AvifEncoderObject *self, PyObject *args) {
 
     if (strcmp(mode, "RGBA") == 0) {
         rgb.format = AVIF_RGB_FORMAT_RGBA;
+#if AVIF_VERSION >= 1030000  // 1.3.0
+    } else if (strcmp(mode, "L") == 0) {
+        rgb.format = AVIF_RGB_FORMAT_GRAY;
+#endif
     } else {
         rgb.format = AVIF_RGB_FORMAT_RGB;
     }
@@ -734,9 +740,7 @@ _encoder_add(AvifEncoderObject *self, PyObject *args) {
     }
 
 end:
-    if (&rgb) {
-        avifRGBImageFreePixels(&rgb);
-    }
+    avifRGBImageFreePixels(&rgb);
     if (!self->first_frame) {
         avifImageDestroy(frame);
     }
@@ -749,7 +753,7 @@ end:
 }
 
 PyObject *
-_encoder_finish(AvifEncoderObject *self) {
+_encoder_finish(AvifEncoderObject *self, PyObject *args) {
     avifEncoder *encoder = self->encoder;
 
     avifRWData raw = AVIF_DATA_EMPTY;
@@ -887,17 +891,17 @@ AvifDecoderNew(PyObject *self_, PyObject *args) {
     return (PyObject *)self;
 }
 
-PyObject *
+void
 _decoder_dealloc(AvifDecoderObject *self) {
     if (self->decoder) {
         avifDecoderDestroy(self->decoder);
     }
     Py_XDECREF(self->data);
-    Py_RETURN_NONE;
+    Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 PyObject *
-_decoder_get_info(AvifDecoderObject *self) {
+_decoder_get_info(AvifDecoderObject *self, PyObject *args) {
     avifDecoder *decoder = self->decoder;
     avifImage *image = decoder->image;
 
@@ -906,17 +910,40 @@ _decoder_get_info(AvifDecoderObject *self) {
     PyObject *xmp = NULL;
     PyObject *ret = NULL;
 
+    char *mode;
+    if (decoder->alphaPresent) {
+        mode = "RGBA";
+#if AVIF_VERSION >= 1030000  // 1.3.0
+    } else if (image->yuvFormat == AVIF_PIXEL_FORMAT_YUV400) {
+        mode = "L";
+#endif
+    } else {
+        mode = "RGB";
+    }
+
     if (image->xmp.size) {
         xmp = PyBytes_FromStringAndSize((const char *)image->xmp.data, image->xmp.size);
+        if (!xmp) {
+            return NULL;
+        }
     }
 
     if (image->exif.size) {
         exif =
             PyBytes_FromStringAndSize((const char *)image->exif.data, image->exif.size);
+        if (!exif) {
+            Py_XDECREF(xmp);
+            return NULL;
+        }
     }
 
     if (image->icc.size) {
         icc = PyBytes_FromStringAndSize((const char *)image->icc.data, image->icc.size);
+        if (!icc) {
+            Py_XDECREF(xmp);
+            Py_XDECREF(exif);
+            return NULL;
+        }
     }
 
     ret = Py_BuildValue(
@@ -924,7 +951,7 @@ _decoder_get_info(AvifDecoderObject *self) {
         image->width,
         image->height,
         decoder->imageCount,
-        decoder->alphaPresent ? "RGBA" : "RGB",
+        mode,
         NULL == icc ? Py_None : icc,
         NULL == exif ? Py_None : exif,
         irot_imir_to_exif_orientation(image),
@@ -969,7 +996,15 @@ _decoder_get_frame(AvifDecoderObject *self, PyObject *args) {
     avifRGBImageSetDefaults(&rgb, image);
 
     rgb.depth = 8;
-    rgb.format = decoder->alphaPresent ? AVIF_RGB_FORMAT_RGBA : AVIF_RGB_FORMAT_RGB;
+    if (decoder->alphaPresent) {
+        rgb.format = AVIF_RGB_FORMAT_RGBA;
+#if AVIF_VERSION >= 1030000  // 1.3.0
+    } else if (image->yuvFormat == AVIF_PIXEL_FORMAT_YUV400) {
+        rgb.format = AVIF_RGB_FORMAT_GRAY;
+#endif
+    } else {
+        rgb.format = AVIF_RGB_FORMAT_RGB;
+    }
     rgb.chromaUpsampling = self->upsampling;
 
 #if AVIF_VERSION < 1000000
@@ -1000,6 +1035,7 @@ _decoder_get_frame(AvifDecoderObject *self, PyObject *args) {
 
     if (rgb.height > PY_SSIZE_T_MAX / rgb.rowBytes) {
         PyErr_SetString(PyExc_MemoryError, "Integer overflow in pixel size");
+        avifRGBImageFreePixels(&rgb);
         return NULL;
     }
 
@@ -1007,6 +1043,9 @@ _decoder_get_frame(AvifDecoderObject *self, PyObject *args) {
 
     bytes = PyBytes_FromStringAndSize((char *)rgb.pixels, size);
     avifRGBImageFreePixels(&rgb);
+    if (!bytes) {
+        return NULL;
+    }
 
     ret = Py_BuildValue(
         "SKKK",
@@ -1064,11 +1103,7 @@ static PyTypeObject AvifDecoder_Type = {
 };
 
 PyObject *
-#if PY_VERSION_HEX >= 0x03000000
 AvifCodecVersions(PyObject *self, PyObject *args) {
-#else
-AvifCodecVersions() {
-#endif
     char codecVersions[256];
     avifCodecVersions(codecVersions);
     return PyUnicode_FromString(codecVersions);
@@ -1102,6 +1137,7 @@ static PyMethodDef avifMethods[] = {
     {"AvifDecoder", AvifDecoderNew, METH_VARARGS},
     {"AvifEncoder", AvifEncoderNew, METH_VARARGS},
     {"AvifCodecVersions", AvifCodecVersions, METH_NOARGS},
+    {"codec_versions", AvifCodecVersions, METH_NOARGS},
     {"decoder_codec_available", _decoder_codec_available, METH_VARARGS},
     {"encoder_codec_available", _encoder_codec_available, METH_VARARGS},
     {NULL, NULL}};
@@ -1111,6 +1147,9 @@ setup_module(PyObject *m) {
     PyObject *d = PyModule_GetDict(m);
 
     PyObject *v = PyUnicode_FromString(avifVersion());
+    if (!v) {
+        return -1;
+    }
     if (PyDict_SetItemString(d, "libavif_version", v) < 0) {
         Py_DECREF(v);
         return -1;
@@ -1119,7 +1158,9 @@ setup_module(PyObject *m) {
 
     v = Py_BuildValue(
         "(iii)", AVIF_VERSION_MAJOR, AVIF_VERSION_MINOR, AVIF_VERSION_PATCH);
-
+    if (!v) {
+        return -1;
+    }
     if (PyDict_SetItemString(d, "VERSION", v) < 0) {
         Py_DECREF(v);
         return -1;

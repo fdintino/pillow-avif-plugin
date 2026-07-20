@@ -1,6 +1,58 @@
 Changelog
 =========
 
+1.6.0 (unreleased)
+------------------
+
+* **Added**: Native grayscale (mode ``L``) support when built against
+  libavif 1.3.0 or greater: images with 4:0:0 subsampling now load in ``L``
+  mode instead of ``RGB``, and grayscale images are encoded with
+  ``AVIF_RGB_FORMAT_GRAY``, defaulting to 4:0:0 subsampling. Ported from
+  Pillow `#9471`_.
+* **Added**: ``AvifImagePlugin.get_codec_version()`` helper and
+  ``_avif.codec_versions`` (alias of ``_avif.AvifCodecVersions``), matching
+  Pillow.
+* **Fixed**: Conversion of the AVIF rotation property (``irot``) to EXIF
+  orientation swapped 90° and 270° rotations (Pillow `#8866`_).
+* **Fixed**: When saving, an EXIF Orientation tag is now removed from the
+  EXIF payload and stored as ``irot``/``imir`` transformations instead of
+  being written in both places.
+* **Fixed**: ``AvifEncoder`` and ``AvifDecoder`` objects were never freed,
+  leaking memory with every encode/decode (Pillow `#9501`_).
+* **Fixed**: Incorrect error check after creating an image frame while
+  encoding an animation (Pillow `#9442`_), missing NULL dereference checks
+  and a pixel buffer leak on an error path (Pillow `#9489`_).
+* **Fixed**: Compilation against libavif 0.8.x and 0.9.0/0.9.1
+  (``avifImageMirror`` member name handling).
+* **CI**: Update libavif to **1.4.2**. See the table below for all AVIF
+  codec versions in this release.
+* **CI**: Pin the manylinux2014 image used for Python 3.8 wheels to the last
+  tag that still includes CPython 3.8, and pin ``cmake==4.0.3`` for
+  musllinux_1_1 builds (the last release with musllinux_1_1 wheels).
+* **CI**: Fix the manylinux2010 build, where libavif 1.4.x's ``src/io.c``
+  uses the C11 ``static_assert`` macro that el6's glibc (2.12) does not
+  define in ``<assert.h>``, by mapping it to the compiler's
+  ``_Static_assert`` keyword for C sources.
+* **CI**: Skip installing test dependencies for free-threaded Python 3.13
+  wheels on macOS and Windows, since Pillow no longer publishes ``cp313t``
+  wheels.
+
+.. table::
+
+  ===========  ==========
+  **libavif**  **1.4.2**
+  **libaom**   **3.14.1**
+  **dav1d**    **1.5.3**
+  **SVT-AV1**  **4.1.0**
+  **rav1e**    **0.8.1**
+  ===========  ==========
+
+.. _#9471: https://github.com/python-pillow/Pillow/pull/9471
+.. _#8866: https://github.com/python-pillow/Pillow/pull/8866
+.. _#9501: https://github.com/python-pillow/Pillow/pull/9501
+.. _#9442: https://github.com/python-pillow/Pillow/pull/9442
+.. _#9489: https://github.com/python-pillow/Pillow/pull/9489
+
 1.5.5 (Jan 22, 2026)
 --------------------
 

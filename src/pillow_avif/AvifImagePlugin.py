@@ -3,7 +3,7 @@ from __future__ import division
 from io import BytesIO
 import sys
 
-from PIL import ExifTags, Image, ImageFile
+from PIL import ExifTags, Image, ImageFile, ImageSequence
 
 try:
     from pillow_avif import _avif
@@ -19,10 +19,24 @@ CHROMA_UPSAMPLING = "auto"
 # Decoding is only affected by this for libavif **0.8.4** or greater.
 DEFAULT_MAX_THREADS = 0
 
+# AVIF_RGB_FORMAT_GRAY was added in libavif 1.3.0. When the extension is
+# compiled against an older libavif, grayscale images are read and written
+# as RGB, as before.
+_GRAYSCALE_SUPPORTED = SUPPORTED and _avif.VERSION >= (1, 3, 0)
+_GRAYSCALE_MODES = ("1", "L", "I", "I;16", "I;16L", "I;16B", "I;16N", "F")
+
 if sys.version_info[0] == 2:
     text_type = unicode  # noqa
 else:
     text_type = str
+
+
+def get_codec_version(codec_name):
+    versions = _avif.codec_versions()
+    for version in versions.split(", "):
+        if version.split(" [")[0] == codec_name:
+            return version.split(":")[-1].split(" ")[0]
+    return None
 
 
 def _accept(prefix):
@@ -157,9 +171,15 @@ def _save(im, fp, filename, save_all=False):
     else:
         append_images = []
 
-    total = 0
-    for ims in [im] + append_images:
-        total += getattr(ims, "n_frames", 1)
+    cur_idx = im.tell()
+    if _GRAYSCALE_SUPPORTED:
+        grayscale = all(
+            frame.mode in _GRAYSCALE_MODES
+            for ims in [im] + append_images
+            for frame in ImageSequence.Iterator(ims)
+        )
+    else:
+        grayscale = False
 
     qmin = info.get("qmin", -1)
     qmax = info.get("qmax", -1)
@@ -169,7 +189,7 @@ def _save(im, fp, filename, save_all=False):
         raise ValueError(msg)
 
     duration = info.get("duration", 0)
-    subsampling = info.get("subsampling", "4:2:0")
+    subsampling = info.get("subsampling", "4:0:0" if grayscale else "4:2:0")
     speed = info.get("speed", 6)
     max_threads = info.get("max_threads", DEFAULT_MAX_THREADS)
     codec = info.get("codec", "auto")
@@ -187,7 +207,7 @@ def _save(im, fp, filename, save_all=False):
     if isinstance(exif, Image.Exif):
         exif = exif.tobytes()
 
-    exif_orientation = 0
+    exif_orientation = 1
     if exif:
         exif_data = Image.Exif()
         try:
@@ -198,7 +218,15 @@ def _save(im, fp, filename, save_all=False):
             orientation_tag = next(
                 k for k, v in ExifTags.TAGS.items() if v == "Orientation"
             )
-            exif_orientation = exif_data.get(orientation_tag) or 0
+            if orientation_tag in exif_data:
+                exif_orientation = exif_data.get(orientation_tag) or 1
+                # The orientation is written to the AVIF irot/imir boxes, so
+                # remove it from the EXIF payload to avoid storing it twice.
+                try:
+                    del exif_data[orientation_tag]
+                except KeyError:
+                    pass
+                exif = exif_data.tobytes() if exif_data else b""
 
     xmp = info.get("xmp", im.info.get("xmp") or im.info.get("XML:com.adobe.xmp"))
 
@@ -251,8 +279,11 @@ def _save(im, fp, filename, save_all=False):
     # Add each frame
     frame_idx = 0
     frame_duration = 0
-    cur_idx = im.tell()
-    is_single_frame = total == 1
+    is_single_frame = not append_images and not getattr(im, "is_animated", False)
+    if _GRAYSCALE_SUPPORTED:
+        save_modes = {"L", "RGB", "RGBA"}
+    else:
+        save_modes = {"RGB", "RGBA"}
     try:
         for ims in [im] + append_images:
             # Get # of frames in this image
@@ -265,7 +296,7 @@ def _save(im, fp, filename, save_all=False):
                 # Make sure image mode is supported
                 frame = ims
                 rawmode = ims.mode
-                if ims.mode not in {"RGB", "RGBA"}:
+                if ims.mode not in save_modes:
                     alpha = (
                         "A" in ims.mode
                         or "a" in ims.mode
@@ -275,7 +306,12 @@ def _save(im, fp, filename, save_all=False):
                             and ims.info.get("transparency", None) is not None
                         )
                     )
-                    rawmode = "RGBA" if alpha else "RGB"
+                    if alpha:
+                        rawmode = "RGBA"
+                    elif _GRAYSCALE_SUPPORTED and ims.mode in _GRAYSCALE_MODES:
+                        rawmode = "L"
+                    else:
+                        rawmode = "RGB"
                     frame = ims.convert(rawmode)
 
                 # Update frame duration

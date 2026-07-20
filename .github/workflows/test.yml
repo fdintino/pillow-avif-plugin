@@ -32,7 +32,7 @@ jobs:
         include:
         - python-version: "3.9"
           os: "ubuntu-22.04"
-          libavif-version: "1d469864478de5686a13c06b5539416ac68d98d7"
+          libavif-version: "1.4.2"
         - python-version: "3.7"
           PYTHONOPTIMIZE: 1
         - python-version: "3.8"
