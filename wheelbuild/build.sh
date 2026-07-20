@@ -23,6 +23,12 @@ if [[ "$MB_PYTHON_VERSION" == "2.7" ]]; then
     fi
 fi
 
+# pypa manylinux2014 images dropped CPython 3.8 in May 2026 (after its EOL);
+# pin to the last image tag that still includes it
+if [[ "$MB_PYTHON_VERSION" == "3.8" ]] && [[ "$MB_ML_VER" == "2014" ]]; then
+    DOCKER_IMAGE="quay.io/pypa/manylinux2014_$PLAT:2026.05.02-2"
+fi
+
 echo "::group::Install a virtualenv"
   source multibuild/common_utils.sh
   source multibuild/travis_steps.sh

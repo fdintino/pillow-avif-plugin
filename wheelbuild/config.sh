@@ -4,7 +4,7 @@ set -eo pipefail
 CONFIG_DIR=$(abspath $(dirname "${BASH_SOURCE[0]}"))
 
 ARCHIVE_SDIR=pillow-avif-plugin-depends
-LIBAVIF_VERSION=af69350248af4cf63a24927c13ce2fe86fccecc8
+LIBAVIF_VERSION=${LIBAVIF_VERSION:-1.4.2}
 RAV1E_VERSION=0.7.1
 CCACHE_VERSION=4.10.2
 SCCACHE_VERSION=0.13.0
@@ -456,6 +456,10 @@ function install_cmake {
         $PYTHON_EXE -m pip install 'cmake<3.23'
     elif [ "$MB_PYTHON_VERSION" == "2.7" ]; then
         $PYTHON_EXE -m pip install 'cmake==3.27.7'
+    elif [ -n "$IS_ALPINE" ]; then
+        # cmake 4.0.3 is the last release with musllinux_1_1 wheels; newer
+        # versions would be built from source (and fail on the old openssl)
+        $PYTHON_EXE -m pip install 'cmake==4.0.3'
     else
         $PYTHON_EXE -m pip install cmake
     fi

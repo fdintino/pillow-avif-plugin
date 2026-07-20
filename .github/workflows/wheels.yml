@@ -15,7 +15,7 @@ env:
   MACOSX_DEPLOYMENT_TARGET: "10.10"
   WHEEL_SDIR: wheelhouse
   CONFIG_PATH: pillow-avif-plugin/wheelbuild/config.sh
-  LIBAVIF_VERSION: af69350248af4cf63a24927c13ce2fe86fccecc8
+  LIBAVIF_VERSION: 1.4.2
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -113,8 +113,8 @@ jobs:
       - name: Setup env_vars
         run: |
           cat <<'EOF' >> env_vars.sh
-          export LIBAVIF_VERSION=${{ env.LIBAVIF_VERSION }}"
-          export GITHUB_ACTIONS=1"
+          export LIBAVIF_VERSION=${{ env.LIBAVIF_VERSION }}
+          export GITHUB_ACTIONS=1
           EOF
 
       # - name: Cache build
@@ -239,7 +239,10 @@ jobs:
           CIBW_MANYLINUX_PYPY_AARCH64_IMAGE: ${{ matrix.manylinux }}
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux }}
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx_deployment_target }}
-          CIBW_SKIP: "pp36-* pp37-* pp38-* cp36-* cp37-* cp38-* pp39-* pp310-* pp311-*"
+          CIBW_SKIP: "cp38-* pp311-*"
+          # Pillow no longer publishes cp313t wheels, so the test extra can't
+          # be installed on macOS (on Linux, before-test builds it from source)
+          CIBW_TEST_SKIP: "cp313t-macosx_*"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -298,8 +301,8 @@ jobs:
           CIBW_BEFORE_ALL: "{package}\\winbuild\\build\\build_dep_all.cmd"
           CIBW_CACHE_PATH: "C:\\cibw"
           CIBW_ENABLE: cpython-prerelease cpython-freethreading pypy
-          CIBW_TEST_SKIP: "*-win_arm64 pp*"
-          CIBW_SKIP: "pp36-* pp37-* pp38-* pp39-* pp310* pp311-* cp36-* cp37-* cp38-*"
+          CIBW_TEST_SKIP: "*-win_arm64 pp* cp313t-*"
+          CIBW_SKIP: "cp38-* pp311-*"
           CIBW_TEST_COMMAND: 'docker run --rm
             -v {project}:C:\pillow-avif-plugin
             -v C:\cibw:C:\cibw

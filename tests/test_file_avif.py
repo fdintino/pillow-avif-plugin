@@ -1,4 +1,5 @@
 import os
+import re
 import xml.etree.ElementTree
 from contextlib import contextmanager
 from io import BytesIO
@@ -11,6 +12,7 @@ except ImportError:
 
 import pytest
 
+import PIL
 from PIL import Image, ImageDraw
 from pillow_avif import AvifImagePlugin
 
@@ -29,6 +31,8 @@ try:
     from PIL import UnidentifiedImageError
 except ImportError:
     UnidentifiedImageError = None
+
+PIL_VERSION = tuple(int(v) for v in PIL.__version__.split(".")[:2])
 
 
 CURR_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -124,6 +128,19 @@ class TestFileAvif:
     def test_version(self):
         _avif.AvifCodecVersions()
 
+    def test_codec_version(self):
+        assert AvifImagePlugin.get_codec_version("unknown") is None
+
+        for codec_name in ("aom", "dav1d", "rav1e", "svt"):
+            codec_version = AvifImagePlugin.get_codec_version(codec_name)
+            if _avif.decoder_codec_available(
+                codec_name
+            ) or _avif.encoder_codec_available(codec_name):
+                assert codec_version is not None
+                assert re.search(r"^v?\d+\.\d+\.\d+(-([a-z\d])+)*$", codec_version)
+            else:
+                assert codec_version is None
+
     def test_read(self):
         """
         Can we read an AVIF file without error?
@@ -136,7 +153,6 @@ class TestFileAvif:
             assert image.format == "AVIF"
             assert image.get_format_mimetype() == "image/avif"
             image.load()
-            image.getdata()
 
             # generated with:
             # avifdec hopper.avif hopper_avif_write.png
@@ -153,7 +169,6 @@ class TestFileAvif:
             assert image.size == (128, 128)
             assert image.format == "AVIF"
             image.load()
-            image.getdata()
 
             if mode == "RGB":
                 # avifdec hopper.avif avif/hopper_avif_write.png
@@ -177,6 +192,41 @@ class TestFileAvif:
         """
 
         self._roundtrip(tmp_path, "RGB", 12.5)
+
+    @skip_unless_avif_version_gte((1, 3, 0))
+    def test_write_l(self):
+        im = hopper("L")
+        reloaded = roundtrip(im)
+
+        assert reloaded.mode == "L"
+        assert_image_similar(reloaded, im, 1.69)
+
+    def test_invalid_dimensions(self, tmp_path):
+        test_file = str(tmp_path / "temp.avif")
+        im = Image.new("RGB", (0, 0))
+        with pytest.raises(ValueError):
+            im.save(test_file)
+
+    def test_encoder_finish_none_error(self, monkeypatch, tmp_path):
+        """Save should raise an OSError if AvifEncoder.finish returns None"""
+
+        class _mock_avif:
+            class AvifEncoder:
+                def __init__(self, *args):
+                    pass
+
+                def add(self, *args):
+                    pass
+
+                def finish(self):
+                    return None
+
+        monkeypatch.setattr(AvifImagePlugin, "_avif", _mock_avif)
+
+        im = Image.new("RGB", (150, 150))
+        test_file = str(tmp_path / "temp.avif")
+        with pytest.raises(OSError):
+            im.save(test_file)
 
     def test_AvifEncoder_with_invalid_args(self):
         """
@@ -298,18 +348,32 @@ class TestFileAvif:
             exif = im.getexif()
         assert exif[274] == 1
 
-    def test_exif_save(self, tmp_path):
-        with Image.open("tests/images/exif.avif") as im:
+        # Pillow 11.2+ getexif() also reads the orientation from XMP metadata
+        if PIL_VERSION >= (11, 2):
+            with Image.open("tests/images/xmp_tags_orientation.avif") as im:
+                exif = im.getexif()
+            assert exif[274] == 3
+
+    @pytest.mark.parametrize("use_bytes", [True, False])
+    @pytest.mark.parametrize("orientation", [1, 2, 3, 4, 5, 6, 7, 8])
+    def test_exif_save(self, tmp_path, use_bytes, orientation):
+        exif = Image.Exif()
+        exif[274] = orientation
+        exif_data = exif.tobytes()
+        with Image.open(TEST_AVIF_FILE) as im:
             test_file = str(tmp_path / "temp.avif")
-            im.save(test_file)
+            im.save(test_file, exif=exif_data if use_bytes else exif)
 
         with Image.open(test_file) as reloaded:
-            exif = reloaded.getexif()
-        assert exif[274] == 1
+            if orientation == 1:
+                assert "exif" not in reloaded.info
+            else:
+                assert reloaded.getexif()[274] == orientation
+                assert reloaded.info["exif"] == exif_data
 
-    def test_exif_obj_argument(self, tmp_path):
+    def test_exif_without_orientation(self, tmp_path):
         exif = Image.Exif()
-        exif[274] = 1
+        exif[272] = b"test"
         exif_data = exif.tobytes()
         with Image.open(TEST_AVIF_FILE) as im:
             test_file = str(tmp_path / "temp.avif")
@@ -318,16 +382,28 @@ class TestFileAvif:
         with Image.open(test_file) as reloaded:
             assert reloaded.info["exif"] == exif_data
 
-    def test_exif_bytes_argument(self, tmp_path):
-        exif = Image.Exif()
-        exif[274] = 1
-        exif_data = exif.tobytes()
-        with Image.open(TEST_AVIF_FILE) as im:
-            test_file = str(tmp_path / "temp.avif")
-            im.save(test_file, exif=exif_data)
+    @pytest.mark.parametrize(
+        "rot, mir, exif_orientation",
+        [
+            (0, 0, 4),
+            (0, 1, 2),
+            (1, 0, 5),
+            (1, 1, 7),
+            (2, 0, 2),
+            (2, 1, 4),
+            (3, 0, 7),
+            (3, 1, 5),
+        ],
+    )
+    def test_rot_mir_exif(self, rot, mir, exif_orientation, tmp_path):
+        with Image.open("tests/images/rot%dmir%d.avif" % (rot, mir)) as im:
+            exif = im.getexif()
+            assert exif[274] == exif_orientation
 
+            test_file = str(tmp_path / "temp.avif")
+            im.save(test_file, exif=exif)
         with Image.open(test_file) as reloaded:
-            assert reloaded.info["exif"] == exif_data
+            assert reloaded.getexif()[274] == exif_orientation
 
     def test_exif_invalid(self, tmp_path):
         with Image.open(TEST_AVIF_FILE) as im:
@@ -397,6 +473,14 @@ class TestFileAvif:
             test_file = str(tmp_path / "temp.avif")
             im.save(test_file, subsampling=subsampling)
 
+    @skip_unless_avif_version_gte((1, 3, 0))
+    def test_encoder_subsampling_400(self):
+        with Image.open(TEST_AVIF_FILE) as im:
+            reloaded = roundtrip(im, subsampling="4:0:0")
+
+            assert reloaded.mode == "L"
+            assert_image_similar(reloaded, im.convert("L"), 1.69)
+
     def test_encoder_subsampling_invalid(self, tmp_path):
         with Image.open(TEST_AVIF_FILE) as im:
             test_file = str(tmp_path / "temp.avif")
@@ -435,7 +519,15 @@ class TestFileAvif:
 
     @skip_unless_avif_encoder("aom")
     @skip_unless_avif_version_gte((0, 8, 2))
-    def test_encoder_advanced_codec_options(self):
+    @pytest.mark.parametrize(
+        "advanced",
+        [
+            {"tune": "psnr"},
+            (("tune", "psnr"),),
+            [("tune", "psnr")],
+        ],
+    )
+    def test_encoder_advanced_codec_options(self, advanced):
         with Image.open(TEST_AVIF_FILE) as im:
             ctrl_buf = BytesIO()
             im.save(ctrl_buf, "AVIF", codec="aom")
@@ -444,16 +536,13 @@ class TestFileAvif:
                 test_buf,
                 "AVIF",
                 codec="aom",
-                advanced={
-                    "aq-mode": "1",
-                    "enable-chroma-deltaq": "1",
-                },
+                advanced=advanced,
             )
             assert ctrl_buf.getvalue() != test_buf.getvalue()
 
     @skip_unless_avif_encoder("aom")
     @skip_unless_avif_version_gte((0, 8, 2))
-    @pytest.mark.parametrize("val", [{"foo": "bar"}, 1234])
+    @pytest.mark.parametrize("val", [{"foo": "bar"}, {"foo": 1234}, 1234])
     def test_encoder_advanced_codec_options_invalid(self, tmp_path, val):
         with Image.open(TEST_AVIF_FILE) as im:
             test_file = str(tmp_path / "temp.avif")
@@ -585,10 +674,11 @@ class TestFileAvif:
             assert im.size == (480, 270)
 
     @skip_unless_avif_encoder("aom")
-    def test_aom_optimizations(self):
+    @pytest.mark.parametrize("speed", [-1, 1, 11])
+    def test_aom_optimizations(self, speed):
         im = hopper("RGB")
         buf = BytesIO()
-        im.save(buf, format="AVIF", codec="aom", speed=1)
+        im.save(buf, format="AVIF", codec="aom", speed=speed)
 
     @skip_unless_avif_encoder("svt")
     def test_svt_optimizations(self):
@@ -703,6 +793,18 @@ class TestAvifAnimation:
         im.save(im_buf, "AVIF", alpha_premultiplied=alpha_premultipled)
         im_bytes = im_buf.getvalue()
         assert has_alpha_premultiplied(im_bytes) is alpha_premultipled
+
+    @skip_unless_avif_version_gte((0, 9, 0))
+    @pytest.mark.parametrize("alpha_premultiplied", [False, True])
+    def test_alpha_premultiplied_roundtrip(self, tmp_path, alpha_premultiplied):
+        temp_file = str(tmp_path / "temp.avif")
+        color = (200, 200, 200, 1)
+        im = Image.new("RGBA", (1, 1), color)
+        im.save(temp_file, alpha_premultiplied=alpha_premultiplied)
+
+        expected = (255, 255, 255, 1) if alpha_premultiplied else color
+        with Image.open(temp_file) as reloaded:
+            assert reloaded.getpixel((0, 0)) == expected
 
     def test_timestamp_and_duration(self, tmp_path):
         """
