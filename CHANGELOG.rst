@@ -29,6 +29,10 @@ Changelog
 * **CI**: Pin the manylinux2014 image used for Python 3.8 wheels to the last
   tag that still includes CPython 3.8, and pin ``cmake==4.0.3`` for
   musllinux_1_1 builds (the last release with musllinux_1_1 wheels).
+* **CI**: Fix the manylinux2010 build, where libavif 1.4.x's ``src/io.c``
+  uses the C11 ``static_assert`` macro that el6's glibc (2.12) does not
+  define in ``<assert.h>``, by mapping it to the compiler's
+  ``_Static_assert`` keyword for C sources.
 * **CI**: Skip installing test dependencies for free-threaded Python 3.13
   wheels on macOS and Windows, since Pillow no longer publishes ``cp313t``
   wheels.
