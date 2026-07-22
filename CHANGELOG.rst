@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.6.0 (unreleased)
+1.6.0 (Jul 22, 2026)
 ------------------
 
 * **Added**: Native grayscale (mode ``L``) support when built against
